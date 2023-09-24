@@ -1,0 +1,50 @@
+# https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+name: Python
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install poetry
+        run: pipx install poetry
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'poetry'
+      - name: install (dev) dependencies
+        run: poetry install --with dev
+      - name: lint (ruff)
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          poetry run ruff --format=github --select=E9,F63,F7,F82 --target-version=py310 .
+          # default set of ruff rules with GitHub Annotations
+          poetry run ruff --format=github --target-version=py310 .
+      - name: lint (flak8, black)
+        run: |
+          poetry run flake8 sagemcom_f3896 tests
+          poetry run black --check --diff sagemcom_f3896 tests
+      - name: test
+        run: poetry run pytest --cov sagemcom_f3896 --cov-report html -qq -o console_output_style=count -p no:sugar tests
+      - name: package and test packaging
+        run: |
+          poetry build
+          poetry run twine check dist/*
+          poetry run check-manifest
+      - name: Save artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: |
+            dist

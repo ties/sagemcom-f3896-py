@@ -8,7 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 aiohttp = "^3.8.5"
-prometheus-async = "^22.2.0"
+prometheus-async = {extras = ["aiohttp"], version = "^22.2.0" }
 
 
 [tool.poetry.group.dev.dependencies]
@@ -18,7 +18,41 @@ black = "^23.9.1"
 pytest = "^7.4.2"
 pytest-asyncio = "^0.21.1"
 click = "^8.1.7"
+twine = "^4.0.2"
+check-manifest = "^0.49"
+pytest-cov = "^4.1.0"
+pytest-xdist = "^3.3.1"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+target-version = ["py310"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+profile = "black"
+
+[tool.ruff]
+ignore = ["E501"]
+
+[tool.pytest]
+junit_family = "xunit2"
+
+[settings]
+# known_third_party = []
