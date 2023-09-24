@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "sagemcom-f3896"
+version = "0.1.0"
+description = ""
+authors = ["Ties de Kock <ties@tiesdekock.nl>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+aiohttp = "^3.8.5"
+prometheus-async = "^22.2.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.4.0"
+flake8 = "^6.1.0"
+black = "^23.9.1"
+pytest = "^7.4.2"
+pytest-asyncio = "^0.21.1"
+click = "^8.1.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
