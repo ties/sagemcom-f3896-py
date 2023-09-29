@@ -1,5 +1,5 @@
-import asyncio
 import aiohttp
+import collections
 
 import logging
 import os
@@ -50,3 +50,14 @@ async def test_modem_state(client: SagemcomModemSessionClient, caplog):
     assert state.status == 'operational'
 
     LOG.debug(state)
+
+@pytest.mark.asyncio
+async def test_event_log(client: SagemcomModemSessionClient, caplog):
+    caplog.set_level(logging.DEBUG)
+
+    log_elements = await client.modem_event_log()
+
+    # cnt = collections.Counter([elem.priority for elem in log_elements])
+    # assert cnt['notice'] + cnt['error'] + cnt['warning'] + cnt['critical'] == len(log_elements)
+
+    LOG.debug(log_elements)

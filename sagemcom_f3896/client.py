@@ -3,69 +3,22 @@ import logging
 from dataclasses import dataclass
 
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Dict, Literal, Optional
+from typing import AsyncGenerator, Dict, List, Literal, Optional
 
 import aiohttp
 
+from .models import AuthorisationResult, EventLogItem, ModemStateResult, SystemInfoResult
+
 LOG = logging.getLogger(__name__)
-
-@dataclass
-class AuthorisationResult:
-    token: str
-    user_level: str
-    user_id: int
-
-    @staticmethod
-    def build(body: Dict[str, str]) -> 'AuthorisationResult':
-        return AuthorisationResult(
-            token=body['created']['token'],
-            user_level=body['created']['userLevel'],
-            user_id=body['created']['userId'],
-        )
-    
-@dataclass
-class ModemStateResult:
-    boot_file_name: str
-    docsis_version:  str
-    mac_address:  str
-    serial_number: str
-    up_time: int
-    access_allowed: bool
-    status: str
-    max_cpes: int
-    baseline_privacy_enabled: bool
-
-    @staticmethod
-    def build(body: Dict[str, str]) -> 'ModemStateResult':
-        return ModemStateResult(
-            boot_file_name=body['cablemodem']['bootFilename'],
-            docsis_version=body['cablemodem']['docsisVersion'],
-            mac_address=body['cablemodem']['macAddress'],
-            serial_number=body['cablemodem']['serialNumber'],
-            up_time=body['cablemodem']['upTime'],
-            access_allowed=body['cablemodem']['accessAllowed'],
-            status=body['cablemodem']['status'],
-            max_cpes=body['cablemodem']['maxCPEs'],
-            baseline_privacy_enabled=body['cablemodem']['baselinePrivacyEnabled']
-        )
-    
-@dataclass
-class SystemInfoResult:
-    model_name: str
-    software_version: str
-    hardware_version: str
-
-    @staticmethod
-    def build(body: Dict[str, str]) -> 'SystemInfoResult':
-        return SystemInfoResult(
-            model_name=body['info']['modelName'],
-            software_version=body['info']['softwareVersion'],
-            hardware_version=body['info']['hardwareVersion'],
-        )
 
 
 UNAUTHORIZED_ENDPOINTS = [
     'rest/v1/user/login',
+    'rest/v1/cablemodem/downstream/primary_',
+    'rest/v1/cablemodem/state_',
+    'rest/v1/cablemodem/downstream',
+    'rest/v1/cablemodem/upstream',
+    'rest/v1/cablemodem/eventlog',
 ]
 
 for endpoint in set(UNAUTHORIZED_ENDPOINTS):
@@ -139,6 +92,15 @@ class SagemcomModemSessionClient:
             raise_for_status=raise_for_status,
         ) as resp:
             yield resp
+
+
+    async def modem_event_log(self) -> List['EventLogItem']:
+        async with self.__request('GET', '/rest/v1/cablemodem/eventlog') as resp:
+            res = await resp.json()
+            return [
+                EventLogItem.build(e)
+                for e in res['eventlog']
+            ]
 
 
     async def system_info(self) -> SystemInfoResult:
