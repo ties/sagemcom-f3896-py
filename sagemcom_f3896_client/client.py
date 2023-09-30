@@ -7,7 +7,7 @@ from typing import AsyncGenerator, Dict, List, Literal, Optional
 
 import aiohttp
 
-from .models import AuthorisationResult, EventLogItem, ModemStateResult, SystemInfoResult
+from .models import AuthorisationResult, EventLogItem, ModemATDMAUpstreamChannelResult, ModemOFDMAUpstreamChannelResult, ModemOFDMDownstreamChannelResult, ModemQAMDownstreamChannelResult, ModemServiceFlowResult, ModemStateResult, SystemInfoResult
 
 LOG = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ UNAUTHORIZED_ENDPOINTS = [
     'rest/v1/cablemodem/downstream',
     'rest/v1/cablemodem/upstream',
     'rest/v1/cablemodem/eventlog',
+    'rest/v1/cablemodem/serviceflows'
 ]
 
 for endpoint in set(UNAUTHORIZED_ENDPOINTS):
@@ -94,14 +95,21 @@ class SagemcomModemSessionClient:
             yield resp
 
 
-    async def modem_event_log(self) -> List['EventLogItem']:
+    async def modem_event_log(self) -> List[EventLogItem]:
         async with self.__request('GET', '/rest/v1/cablemodem/eventlog') as resp:
             res = await resp.json()
             return [
                 EventLogItem.build(e)
                 for e in res['eventlog']
             ]
-
+        
+    async def modem_service_flows(self) -> List[ModemServiceFlowResult]:
+        async with self.__request('GET', '/rest/v1/cablemodem/serviceflows') as resp:
+            res = await resp.json()
+            return [
+                ModemServiceFlowResult.build(e)
+                for e in res['serviceFlows']
+            ]
 
     async def system_info(self) -> SystemInfoResult:
         async with self.__request('GET', '/rest/v1/system/info') as resp:
@@ -110,17 +118,21 @@ class SagemcomModemSessionClient:
     async def system_state(self) -> ModemStateResult:
         async with self.__request('GET', '/rest/v1/cablemodem/state_') as resp:
             return ModemStateResult.build(await resp.json())
+        
+    async def modem_downstreams(self) -> List[ModemQAMDownstreamChannelResult | ModemOFDMDownstreamChannelResult]:
+        async with self.__request('GET', '/rest/v1/cablemodem/downstream') as resp:
+            return [
+                ModemQAMDownstreamChannelResult.build(e) if e['channelType'] == 'sc_qam' else ModemOFDMDownstreamChannelResult.build(e)
+                for e in (await resp.json())['downstream']['channels']
+            ]
+    
+    async def modem_upstreams(self) -> List[ModemATDMAUpstreamChannelResult | ModemOFDMAUpstreamChannelResult]:
+        async with self.__request('GET', '/rest/v1/cablemodem/upstream') as resp:
+            return [
+                ModemATDMAUpstreamChannelResult.build(e) if e['channelType'] == 'atdma' else ModemOFDMAUpstreamChannelResult.build(e)
+                for e in (await resp.json())['upstream']['channels']
+            ]
 
-
-    # async def ca_roas(self, ca: str) -> List[CaRoaGet]:
-    #     async with self.__request(
-    #         "GET", f"/api/ca/{ca}/roas", raise_for_status=True
-    #     ) as resp:
-    #         if resp.status == 404:
-    #             # 404 if roa configuration entity does not exist
-    #             return []
-
-    #         return [CaRoaGet.build(r) for r in await resp.json()]
 
 
 @asynccontextmanager

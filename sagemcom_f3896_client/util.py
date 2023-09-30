@@ -1,7 +1,7 @@
 import logging
 import os
 
-from sagemcom_f3896 import SagemcomModemClient, SagemcomModemSessionClient
+from sagemcom_f3896_client import SagemcomModemClient
 
 LOG = logging.getLogger(__name__)
 

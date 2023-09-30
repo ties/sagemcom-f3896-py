@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "sagemcom-f3896"
+name = "sagemcom-f3896-client"
 version = "0.1.0"
 description = ""
 authors = ["Ties de Kock <ties@tiesdekock.nl>"]
