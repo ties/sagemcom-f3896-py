@@ -1,29 +1,36 @@
 import logging
-
-from dataclasses import dataclass
-
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict, List, Literal, Optional
 
 import aiohttp
 
-from .models import AuthorisationResult, EventLogItem, ModemATDMAUpstreamChannelResult, ModemOFDMAUpstreamChannelResult, ModemOFDMDownstreamChannelResult, ModemQAMDownstreamChannelResult, ModemServiceFlowResult, ModemStateResult, SystemInfoResult
+from .models import (
+    AuthorisationResult,
+    EventLogItem,
+    ModemATDMAUpstreamChannelResult,
+    ModemOFDMAUpstreamChannelResult,
+    ModemOFDMDownstreamChannelResult,
+    ModemQAMDownstreamChannelResult,
+    ModemServiceFlowResult,
+    ModemStateResult,
+    SystemInfoResult,
+)
 
 LOG = logging.getLogger(__name__)
 
 
 UNAUTHORIZED_ENDPOINTS = [
-    'rest/v1/user/login',
-    'rest/v1/cablemodem/downstream/primary_',
-    'rest/v1/cablemodem/state_',
-    'rest/v1/cablemodem/downstream',
-    'rest/v1/cablemodem/upstream',
-    'rest/v1/cablemodem/eventlog',
-    'rest/v1/cablemodem/serviceflows'
+    "rest/v1/user/login",
+    "rest/v1/cablemodem/downstream/primary_",
+    "rest/v1/cablemodem/state_",
+    "rest/v1/cablemodem/downstream",
+    "rest/v1/cablemodem/upstream",
+    "rest/v1/cablemodem/eventlog",
+    "rest/v1/cablemodem/serviceflows",
 ]
 
 for endpoint in set(UNAUTHORIZED_ENDPOINTS):
-    assert not endpoint.startswith('/'), "URLs should be relative"
+    assert not endpoint.startswith("/"), "URLs should be relative"
 
 
 class SagemcomModemSessionClient:
@@ -47,12 +54,14 @@ class SagemcomModemSessionClient:
             "Content-Type": "application/json",
             "Referer": self.base_url,
             "Origin": self.base_url,
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
-            'X-Requested-With': 'XMLHttpRequest',
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+            "X-Requested-With": "XMLHttpRequest",
         }
 
     async def _login(self) -> Dict[str, str]:
-        async with self.__request('POST', '/rest/v1/user/login', {'password': self.password}) as res:
+        async with self.__request(
+            "POST", "/rest/v1/user/login", {"password": self.password}
+        ) as res:
             assert res.status == 201
 
             body = await res.json()
@@ -61,7 +70,10 @@ class SagemcomModemSessionClient:
     async def _logout(self) -> None:
         if self.authorization:
             LOG.info("Logging out session userId=%d", self.authorization.user_id)
-            async with self.__request('DELETE', f'/rest/v1/user/{self.authorization.user_id}/token/{self.authorization.token}') as res:
+            async with self.__request(
+                "DELETE",
+                f"/rest/v1/user/{self.authorization.user_id}/token/{self.authorization.token}",
+            ) as res:
                 assert res.status == 204
                 self.authorization = None
 
@@ -77,13 +89,12 @@ class SagemcomModemSessionClient:
         url = f"{self.base_url if not self.base_url.endswith('/') else self.base_url[:-1]}/{path}"
 
         headers = self.__headers()
-        if not path in UNAUTHORIZED_ENDPOINTS:
+        if path not in UNAUTHORIZED_ENDPOINTS:
             # log in because this endpoint requires authentication
             if not self.authorization:
                 LOG.debug("logging in because '%s' requires authentication", path)
                 await self._login()
-            headers['Authorization'] = f"Bearer {self.authorization.token}"
-
+            headers["Authorization"] = f"Bearer {self.authorization.token}"
 
         async with self.__session.request(
             method,
@@ -94,45 +105,45 @@ class SagemcomModemSessionClient:
         ) as resp:
             yield resp
 
-
     async def modem_event_log(self) -> List[EventLogItem]:
-        async with self.__request('GET', '/rest/v1/cablemodem/eventlog') as resp:
+        async with self.__request("GET", "/rest/v1/cablemodem/eventlog") as resp:
             res = await resp.json()
-            return [
-                EventLogItem.build(e)
-                for e in res['eventlog']
-            ]
-        
+            return [EventLogItem.build(e) for e in res["eventlog"]]
+
     async def modem_service_flows(self) -> List[ModemServiceFlowResult]:
-        async with self.__request('GET', '/rest/v1/cablemodem/serviceflows') as resp:
+        async with self.__request("GET", "/rest/v1/cablemodem/serviceflows") as resp:
             res = await resp.json()
-            return [
-                ModemServiceFlowResult.build(e)
-                for e in res['serviceFlows']
-            ]
+            return [ModemServiceFlowResult.build(e) for e in res["serviceFlows"]]
 
     async def system_info(self) -> SystemInfoResult:
-        async with self.__request('GET', '/rest/v1/system/info') as resp:
+        async with self.__request("GET", "/rest/v1/system/info") as resp:
             return SystemInfoResult.build(await resp.json())
-    
+
     async def system_state(self) -> ModemStateResult:
-        async with self.__request('GET', '/rest/v1/cablemodem/state_') as resp:
+        async with self.__request("GET", "/rest/v1/cablemodem/state_") as resp:
             return ModemStateResult.build(await resp.json())
-        
-    async def modem_downstreams(self) -> List[ModemQAMDownstreamChannelResult | ModemOFDMDownstreamChannelResult]:
-        async with self.__request('GET', '/rest/v1/cablemodem/downstream') as resp:
+
+    async def modem_downstreams(
+        self,
+    ) -> List[ModemQAMDownstreamChannelResult | ModemOFDMDownstreamChannelResult]:
+        async with self.__request("GET", "/rest/v1/cablemodem/downstream") as resp:
             return [
-                ModemQAMDownstreamChannelResult.build(e) if e['channelType'] == 'sc_qam' else ModemOFDMDownstreamChannelResult.build(e)
-                for e in (await resp.json())['downstream']['channels']
-            ]
-    
-    async def modem_upstreams(self) -> List[ModemATDMAUpstreamChannelResult | ModemOFDMAUpstreamChannelResult]:
-        async with self.__request('GET', '/rest/v1/cablemodem/upstream') as resp:
-            return [
-                ModemATDMAUpstreamChannelResult.build(e) if e['channelType'] == 'atdma' else ModemOFDMAUpstreamChannelResult.build(e)
-                for e in (await resp.json())['upstream']['channels']
+                ModemQAMDownstreamChannelResult.build(e)
+                if e["channelType"] == "sc_qam"
+                else ModemOFDMDownstreamChannelResult.build(e)
+                for e in (await resp.json())["downstream"]["channels"]
             ]
 
+    async def modem_upstreams(
+        self,
+    ) -> List[ModemATDMAUpstreamChannelResult | ModemOFDMAUpstreamChannelResult]:
+        async with self.__request("GET", "/rest/v1/cablemodem/upstream") as resp:
+            return [
+                ModemATDMAUpstreamChannelResult.build(e)
+                if e["channelType"] == "atdma"
+                else ModemOFDMAUpstreamChannelResult.build(e)
+                for e in (await resp.json())["upstream"]["channels"]
+            ]
 
 
 @asynccontextmanager

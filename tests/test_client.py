@@ -1,11 +1,10 @@
-import datetime
-import aiohttp
 import collections
-
+import datetime
 import logging
 import os
-import pytest
 
+import aiohttp
+import pytest
 from pytest import LogCaptureFixture
 
 from sagemcom_f3896_client import SagemcomModemSessionClient
@@ -19,13 +18,13 @@ def client(event_loop):
     """
     Build a client using settings from environment variable, without requiring a context manager.
     """
-    modem_url = os.environ.get('MODEM_URL', None)
+    modem_url = os.environ.get("MODEM_URL", None)
     if not modem_url:
-        LOG.info('MODEM_URL environment variable is not set, using default')
-        modem_url = 'http://192.168.100.1'
+        LOG.info("MODEM_URL environment variable is not set, using default")
+        modem_url = "http://192.168.100.1"
 
-    modem_password = os.environ.get('MODEM_PASSWORD')
-    assert modem_password, 'MODEM_PASSWORD environment variable is not set'
+    modem_password = os.environ.get("MODEM_PASSWORD")
+    assert modem_password, "MODEM_PASSWORD environment variable is not set"
 
     async def sessio():
         return aiohttp.ClientSession()
@@ -35,20 +34,25 @@ def client(event_loop):
 
 
 @pytest.mark.asyncio
-async def test_system_info(client: SagemcomModemSessionClient, caplog: pytest.LogCaptureFixture):
+async def test_system_info(
+    client: SagemcomModemSessionClient, caplog: pytest.LogCaptureFixture
+):
     caplog.set_level(logging.DEBUG)
 
     info = await client.system_info()
-    assert 'F3896' in info.model_name
+    assert "F3896" in info.model_name
 
 
 @pytest.mark.asyncio
-async def test_modem_state(client: SagemcomModemSessionClient, caplog: LogCaptureFixture):
+async def test_modem_state(
+    client: SagemcomModemSessionClient, caplog: LogCaptureFixture
+):
     caplog.set_level(logging.DEBUG)
 
     state = await client.system_state()
     assert state.up_time > 0
-    assert state.status == 'operational'
+    assert state.status == "operational"
+
 
 @pytest.mark.asyncio
 async def test_event_log(client: SagemcomModemSessionClient, caplog: LogCaptureFixture):
@@ -57,7 +61,9 @@ async def test_event_log(client: SagemcomModemSessionClient, caplog: LogCaptureF
     log_elements = await client.modem_event_log()
 
     cnt = collections.Counter([elem.priority for elem in log_elements])
-    assert cnt['notice'] + cnt['error'] + cnt['warning'] + cnt['critical'] == len(log_elements)
+    assert cnt["notice"] + cnt["error"] + cnt["warning"] + cnt["critical"] == len(
+        log_elements
+    )
 
     now = datetime.datetime.now().replace(tzinfo=datetime.timezone.utc)
 
@@ -65,8 +71,11 @@ async def test_event_log(client: SagemcomModemSessionClient, caplog: LogCaptureF
         # assume all log elements are less than a year old
         assert (now - elem.time) < datetime.timedelta(days=365)
 
+
 @pytest.mark.asyncio
-async def test_modem_service_flows(client: SagemcomModemSessionClient, caplog: LogCaptureFixture):
+async def test_modem_service_flows(
+    client: SagemcomModemSessionClient, caplog: LogCaptureFixture
+):
     caplog.set_level(logging.DEBUG)
 
     flows = await client.modem_service_flows()
@@ -82,7 +91,9 @@ async def test_modem_service_flows(client: SagemcomModemSessionClient, caplog: L
 
 
 @pytest.mark.asyncio
-async def test_modem_downstreams(client: SagemcomModemSessionClient, caplog: LogCaptureFixture):
+async def test_modem_downstreams(
+    client: SagemcomModemSessionClient, caplog: LogCaptureFixture
+):
     caplog.set_level(logging.DEBUG)
 
     downstreams = await client.modem_downstreams()
@@ -105,14 +116,22 @@ async def test_modem_downstreams(client: SagemcomModemSessionClient, caplog: Log
                 assert ds.channel_width > 1 and ds.channel_width < 1000
                 assert ds.fft_type in ("4K",)
                 assert ds.number_of_active_subcarriers > 0
-                assert ds.modulation in ("qam_4096", "qam_2048", "qam_1024", "qam_512", "qam_256")
+                assert ds.modulation in (
+                    "qam_4096",
+                    "qam_2048",
+                    "qam_1024",
+                    "qam_512",
+                    "qam_256",
+                )
                 assert ds.first_active_subcarrier > 0
             case _:
                 raise ValueError(f"unknown channel_type: {ds.channel_type}")
 
 
 @pytest.mark.asyncio
-async def test_modem_upstreams(client: SagemcomModemSessionClient, caplog: LogCaptureFixture):
+async def test_modem_upstreams(
+    client: SagemcomModemSessionClient, caplog: LogCaptureFixture
+):
     caplog.set_level(logging.DEBUG)
 
     upstreams = await client.modem_upstreams()
