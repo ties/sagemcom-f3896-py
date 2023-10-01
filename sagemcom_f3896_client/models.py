@@ -89,7 +89,7 @@ class ModemQAMDownstreamChannelResult(ModemDownstreamChannelResult):
             channel_type=elem["channelType"],
             channel_id=elem["channelId"],
             frequency=elem["frequency"] / 1_000_000,
-            power=elem["power"],
+            power=elem["power"] / 1.0,
             modulation=elem["modulation"],
             snr=elem["snr"],
             rx_mer=elem["rxMer"],
@@ -119,8 +119,8 @@ class ModemOFDMDownstreamChannelResult(ModemDownstreamChannelResult):
             modulation=elem["modulation"],
             first_active_subcarrier=elem["firstActiveSubcarrier"],
             lock_status=elem["lockStatus"],
-            rx_mer=elem["rxMer"],
-            power=elem["power"],
+            rx_mer=elem["rxMer"] // 10,
+            power=elem["power"] / 1.0,
             corrected_errors=elem["correctedErrors"],
             uncorrected_errors=elem["uncorrectedErrors"],
         )
@@ -128,15 +128,15 @@ class ModemOFDMDownstreamChannelResult(ModemDownstreamChannelResult):
 
 @dataclass(kw_only=True)
 class ModemUpstreamChannelResult:
+    channel_type: Literal["atdma", "ofdma"]
     channel_id: int
-    lock_status: Literal["locked", "unlocked"]
+
+    lock_status: bool
     power: float
     modulation: Literal["qam_64", "qam_256"]
 
     t3_timeouts: int
     t4_timeouts: int
-
-    channel_type: Literal["atdma", "ofdma"]
 
 
 @dataclass(kw_only=True)
@@ -149,15 +149,17 @@ class ModemATDMAUpstreamChannelResult(ModemUpstreamChannelResult):
     @staticmethod
     def build(elem: Dict[str, str]) -> "ModemATDMAUpstreamChannelResult":
         return ModemATDMAUpstreamChannelResult(
+            channel_type=elem["channelType"],
             channel_id=elem["channelId"],
             lock_status=elem["lockStatus"],
             power=elem["power"] / 10,
             modulation=elem["modulation"],
-            channel_type=elem["channelType"],
+
             frequency=elem["frequency"] / 1_000_000,
             symbol_rate=elem["symbolRate"],
             t1_timeouts=elem["t1Timeout"],
             t2_timeouts=elem["t2Timeout"],
+
             t3_timeouts=elem["t3Timeout"],
             t4_timeouts=elem["t4Timeout"],
         )
@@ -173,11 +175,12 @@ class ModemOFDMAUpstreamChannelResult(ModemUpstreamChannelResult):
     @staticmethod
     def build(elem: Dict[str, str]) -> "ModemOFDMAUpstreamChannelResult":
         return ModemOFDMAUpstreamChannelResult(
-            channel_id=elem["channelId"],
-            lock_status=elem["lockStatus"],
-            power=elem["power"] / 10,
-            modulation=elem["modulation"],
             channel_type=elem["channelType"],
+            channel_id=elem["channelId"],
+
+            lock_status=elem["lockStatus"],
+            power=elem["power"] / 100,
+            modulation=elem["modulation"],
             channel_width=elem["channelWidth"] / 1_000_000,
             fft_type=elem["fftType"],
             # inconsistent capitals in the JSON

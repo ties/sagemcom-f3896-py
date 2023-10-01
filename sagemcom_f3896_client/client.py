@@ -1,4 +1,6 @@
 import logging
+import time
+
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict, List, Literal, Optional
 
@@ -96,6 +98,9 @@ class SagemcomModemSessionClient:
                 await self._login()
             headers["Authorization"] = f"Bearer {self.authorization.token}"
 
+
+        t0 = time.time()
+
         async with self.__session.request(
             method,
             url,
@@ -103,6 +108,14 @@ class SagemcomModemSessionClient:
             json=json,
             raise_for_status=raise_for_status,
         ) as resp:
+            LOG.debug(
+                "%s %s %s %.3f %s",
+                method,
+                url,
+                resp.status,
+                time.time() - t0,
+                resp.reason,
+            )
             yield resp
 
     async def modem_event_log(self) -> List[EventLogItem]:
