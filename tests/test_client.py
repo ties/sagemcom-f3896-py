@@ -2,6 +2,7 @@ import collections
 import datetime
 import logging
 import os
+import random
 
 import aiohttp
 import pytest
@@ -35,6 +36,17 @@ def client(event_loop):
     yield client
 
     event_loop.run_until_complete(client._logout())
+
+@pytestmark.asyncio
+async def test_echo(
+    client: SagemcomModemSessionClient, caplog: LogCaptureFixture
+):
+    caplog.set_level(logging.DEBUG)
+
+    randint = random.nextint(0, 1_000_000)
+
+    echoed = await client.echo({"value": randint})
+    assert echoed["value"] == randint
 
 
 @pytest.mark.asyncio
@@ -120,7 +132,6 @@ async def test_modem_downstreams(
                     "qam_512",
                     "qam_256",
                 )
-                assert ds.first_active_subcarrier > 0
             case _:
                 raise ValueError(f"unknown channel_type: {ds.channel_type}")
 
@@ -136,6 +147,7 @@ async def test_modem_upstreams(
 
     for us in upstreams:
         assert us.channel_id > 0
+        assert us.frequency > 0 and us.frequency < 1000
         assert us.lock_status is not None
         assert us.power > -50 and us.power < 50
         assert us.modulation in ("qam_64", "qam_256")
@@ -145,7 +157,6 @@ async def test_modem_upstreams(
 
         match us.channel_type:
             case "atdma":
-                assert us.frequency > 0 and us.frequency < 1000
                 assert us.symbol_rate > 0 and us.symbol_rate <= 10240
                 assert us.t1_timeouts >= 0
                 assert us.t2_timeouts >= 0
@@ -153,7 +164,6 @@ async def test_modem_upstreams(
                 assert us.channel_width > 2 and us.channel_width < 200
                 assert us.fft_type in ("4K", "2K")
                 assert us.number_of_active_subcarriers > 0
-                assert us.first_active_subcarrier > 0
             case _:
                 raise ValueError(f"unknown channel_type: {us.channel_type}")
             

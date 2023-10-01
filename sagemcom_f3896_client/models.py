@@ -79,6 +79,8 @@ class ModemStateResult:
 class ModemDownstreamChannelResult:
     channel_type: Literal["ofdm", "sc_qam"] = "ofdm"
     channel_id: int
+    """In MHz. Frequency of the first active carrier for OFDM"""
+    frequency: float
     rx_mer: int
     power: float
     lock_status: Literal["locked", "unlocked"]
@@ -89,8 +91,6 @@ class ModemDownstreamChannelResult:
 @dataclass(kw_only=True)
 class ModemQAMDownstreamChannelResult(ModemDownstreamChannelResult):
     channel_id: int
-    # in MHz
-    frequency: float
     # in DB (int)
     snr: int
     modulation: str
@@ -100,7 +100,7 @@ class ModemQAMDownstreamChannelResult(ModemDownstreamChannelResult):
         return ModemQAMDownstreamChannelResult(
             channel_type=elem["channelType"],
             channel_id=elem["channelId"],
-            frequency=elem["frequency"] / 1_000_000,
+            frequency=elem["frequency"],
             power=elem["power"] / 1.0,
             modulation=elem["modulation"],
             snr=elem["snr"],
@@ -113,26 +113,26 @@ class ModemQAMDownstreamChannelResult(ModemDownstreamChannelResult):
 
 @dataclass(kw_only=True)
 class ModemOFDMDownstreamChannelResult(ModemDownstreamChannelResult):
+    """In hz"""
     channel_width: float
     fft_type: Literal["2K", "4K", "8K", "16K"]
     number_of_active_subcarriers: int
     modulation: Literal["qam_256", "qam_512", "qam_1024", "qam_2048", "qam_4096"]
-    first_active_subcarrier: int
 
     @staticmethod
     def build(elem: Dict[str, str]) -> "ModemOFDMDownstreamChannelResult":
         return ModemOFDMDownstreamChannelResult(
             channel_type=elem["channelType"],
             channel_id=elem["channelId"],
-            channel_width=elem["channelWidth"] / 1_000_000,
+            channel_width=elem["channelWidth"],
             fft_type=elem["fftType"],
             # note: inconsistent caps in JSON
             number_of_active_subcarriers=elem["numberOfActiveSubCarriers"],
             modulation=elem["modulation"],
-            first_active_subcarrier=elem["firstActiveSubcarrier"],
+            frequency=elem["firstActiveSubcarrier"] * 1_000_000,
             lock_status=elem["lockStatus"],
-            rx_mer=elem["rxMer"] // 10,
-            power=elem["power"] / 1.0,
+            rx_mer=elem["rxMer"] / 10.0,
+            power=elem["power"] / 10.0,
             corrected_errors=elem["correctedErrors"],
             uncorrected_errors=elem["uncorrectedErrors"],
         )
@@ -142,6 +142,8 @@ class ModemOFDMDownstreamChannelResult(ModemDownstreamChannelResult):
 class ModemUpstreamChannelResult:
     channel_type: Literal["atdma", "ofdma"]
     channel_id: int
+    """In hz. Frequency of the first active carrier for OFDMA"""
+    frequency: float
 
     lock_status: bool
     power: float
@@ -153,7 +155,6 @@ class ModemUpstreamChannelResult:
 
 @dataclass(kw_only=True)
 class ModemATDMAUpstreamChannelResult(ModemUpstreamChannelResult):
-    frequency: float
     symbol_rate: int
     t1_timeouts: int
     t2_timeouts: int
@@ -164,10 +165,10 @@ class ModemATDMAUpstreamChannelResult(ModemUpstreamChannelResult):
             channel_type=elem["channelType"],
             channel_id=elem["channelId"],
             lock_status=elem["lockStatus"],
-            power=elem["power"] / 10,
+            power=elem["power"],
             modulation=elem["modulation"],
 
-            frequency=elem["frequency"] / 1_000_000,
+            frequency=elem["frequency"],
             symbol_rate=elem["symbolRate"],
             t1_timeouts=elem["t1Timeout"],
             t2_timeouts=elem["t2Timeout"],
@@ -182,22 +183,21 @@ class ModemOFDMAUpstreamChannelResult(ModemUpstreamChannelResult):
     channel_width: float
     fft_type: Literal["2K", "4K"]
     number_of_active_subcarriers: int
-    first_active_subcarrier: int
 
     @staticmethod
     def build(elem: Dict[str, str]) -> "ModemOFDMAUpstreamChannelResult":
         return ModemOFDMAUpstreamChannelResult(
             channel_type=elem["channelType"],
             channel_id=elem["channelId"],
+            frequency=elem["firstActiveSubcarrier"] * 1_000_000,
 
             lock_status=elem["lockStatus"],
-            power=elem["power"] / 100,
+            power=elem["power"] / 10,
             modulation=elem["modulation"],
             channel_width=elem["channelWidth"] / 1_000_000,
             fft_type=elem["fftType"],
             # inconsistent capitals in the JSON
             number_of_active_subcarriers=elem["numberOfActiveSubCarriers"],
-            first_active_subcarrier=elem["firstActiveSubcarrier"],
             t3_timeouts=elem["t3Timeout"],
             t4_timeouts=elem["t4Timeout"],
         )

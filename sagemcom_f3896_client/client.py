@@ -136,6 +136,10 @@ class SagemcomModemSessionClient:
             )
             yield resp
 
+    async def echo(self, body: object) -> object:
+        async with self.__request("POST", "/rest/v1/echo", json=body) as resp:
+            return await resp.json()
+
     async def modem_event_log(self) -> List[EventLogItem]:
         async with self.__request("GET", "/rest/v1/cablemodem/eventlog") as resp:
             res = await resp.json()
@@ -153,6 +157,12 @@ class SagemcomModemSessionClient:
     async def system_state(self) -> ModemStateResult:
         async with self.__request("GET", "/rest/v1/cablemodem/state_") as resp:
             return ModemStateResult.build(await resp.json())
+        
+    async def system_reboot(self) -> bool:
+        async with self.__request("POST", "/rest/v1/system/reboot", json={"reboot": {"enable": True}}) as resp:
+            body = await resp.json()
+            return "accepted" in body
+
 
     async def modem_downstreams(
         self,
