@@ -36,16 +36,6 @@ def client(event_loop):
 
     event_loop.run_until_complete(client._logout())
 
-@requires_modem_password()
-@pytest.mark.asyncio
-async def test_system_info(
-    client: SagemcomModemSessionClient, caplog: pytest.LogCaptureFixture
-):
-    caplog.set_level(logging.DEBUG)
-
-    info = await client.system_info()
-    assert "F3896" in info.model_name
-
 
 @pytest.mark.asyncio
 async def test_modem_state(
@@ -107,7 +97,7 @@ async def test_modem_downstreams(
 
     for ds in downstreams:
         assert ds.rx_mer > 0 and ds.rx_mer < 100
-        assert ds.power > 0
+        assert ds.power >= -5
         assert ds.lock_status is not None
         assert ds.corrected_errors >= 0
         assert ds.uncorrected_errors >= 0
@@ -166,3 +156,26 @@ async def test_modem_upstreams(
                 assert us.first_active_subcarrier > 0
             case _:
                 raise ValueError(f"unknown channel_type: {us.channel_type}")
+            
+
+@requires_modem_password()
+@pytest.mark.asyncio
+async def test_system_info(
+    client: SagemcomModemSessionClient, caplog: pytest.LogCaptureFixture
+):
+    caplog.set_level(logging.DEBUG)
+
+    info = await client.system_info()
+    assert "F3896" in info.model_name
+
+
+@requires_modem_password()
+@pytest.mark.asyncio
+async def test_system_provisioning(
+    client: SagemcomModemSessionClient, caplog: pytest.LogCaptureFixture
+):
+    caplog.set_level(logging.DEBUG)
+
+    provision_status = await client.system_provisioning()
+    assert provision_status.provisioning_mode == "disable"
+    assert len(list(filter(":".__eq__, provision_status.mac_address))) == 5

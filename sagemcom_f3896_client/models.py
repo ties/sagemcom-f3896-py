@@ -7,17 +7,29 @@ LOG = logging.getLogger(__name__)
 
 
 @dataclass
-class AuthorisationResult:
+class UserAuthorisationResult:
     token: str
     user_level: str
     user_id: int
 
     @staticmethod
-    def build(body: Dict[str, str]) -> "AuthorisationResult":
-        return AuthorisationResult(
+    def build(body: Dict[str, str]) -> "UserAuthorisationResult":
+        return UserAuthorisationResult(
             token=body["created"]["token"],
             user_level=body["created"]["userLevel"],
             user_id=body["created"]["userId"],
+        )
+
+@dataclass
+class UserTokenResult:
+    token: str
+    user_level: str
+
+    @staticmethod
+    def build(body: Dict[str, str]) -> "UserTokenResult":
+        return UserTokenResult(
+            token=body["created"]["token"],
+            user_level=body["created"]["userLevel"],
         )
 
 
@@ -235,4 +247,18 @@ class SystemInfoResult:
             model_name=body["info"]["modelName"],
             software_version=body["info"]["softwareVersion"],
             hardware_version=body["info"]["hardwareVersion"],
+        )
+
+@dataclass
+class SystemProvisioningResponse:
+    provisioning_mode: Literal['enable', 'disable']
+    mac_address: str
+    ds_lite_enabled: bool
+
+    @staticmethod
+    def build(body: Dict[str, str]) -> "SystemProvisioningResponse":
+        return SystemProvisioningResponse(
+            provisioning_mode=body["provisioning"]["mode"],
+            mac_address=body["provisioning"]["macAddress"],
+            ds_lite_enabled=body["provisioning"]["dsLite"]["enable"],
         )
