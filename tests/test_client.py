@@ -8,6 +8,7 @@ import pytest
 from pytest import LogCaptureFixture
 
 from sagemcom_f3896_client import SagemcomModemSessionClient
+from tests.util import requires_modem_password
 
 logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger(__name__)
@@ -30,9 +31,12 @@ def client(event_loop):
         return aiohttp.ClientSession()
 
     session = event_loop.run_until_complete(sessio())
-    return SagemcomModemSessionClient(session, modem_url, modem_password)
+    client = SagemcomModemSessionClient(session, modem_url, modem_password)
+    yield client
 
+    event_loop.run_until_complete(client._logout())
 
+@requires_modem_password()
 @pytest.mark.asyncio
 async def test_system_info(
     client: SagemcomModemSessionClient, caplog: pytest.LogCaptureFixture
@@ -54,6 +58,7 @@ async def test_modem_state(
     assert state.status == "operational"
 
 
+@requires_modem_password()
 @pytest.mark.asyncio
 async def test_event_log(client: SagemcomModemSessionClient, caplog: LogCaptureFixture):
     caplog.set_level(logging.DEBUG)
@@ -72,6 +77,7 @@ async def test_event_log(client: SagemcomModemSessionClient, caplog: LogCaptureF
         assert (now - elem.time) < datetime.timedelta(days=365)
 
 
+@requires_modem_password()
 @pytest.mark.asyncio
 async def test_modem_service_flows(
     client: SagemcomModemSessionClient, caplog: LogCaptureFixture
@@ -90,6 +96,7 @@ async def test_modem_service_flows(
         assert flow.schedule_type is not None
 
 
+@requires_modem_password()
 @pytest.mark.asyncio
 async def test_modem_downstreams(
     client: SagemcomModemSessionClient, caplog: LogCaptureFixture
@@ -128,6 +135,7 @@ async def test_modem_downstreams(
                 raise ValueError(f"unknown channel_type: {ds.channel_type}")
 
 
+@requires_modem_password()
 @pytest.mark.asyncio
 async def test_modem_upstreams(
     client: SagemcomModemSessionClient, caplog: LogCaptureFixture

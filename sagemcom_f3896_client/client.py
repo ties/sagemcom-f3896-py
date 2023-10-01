@@ -53,11 +53,8 @@ class SagemcomModemSessionClient:
     def __headers(self) -> Dict[str, str]:
         return {
             "Accept": "*/*",
-            "Content-Type": "application/json",
             "Referer": self.base_url,
             "Origin": self.base_url,
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
-            "X-Requested-With": "XMLHttpRequest",
         }
 
     async def _login(self) -> Dict[str, str]:
@@ -71,7 +68,7 @@ class SagemcomModemSessionClient:
 
     async def _logout(self) -> None:
         if self.authorization:
-            LOG.info("Logging out session userId=%d", self.authorization.user_id)
+            LOG.debug("Logging out session userId=%d", self.authorization.user_id)
             async with self.__request(
                 "DELETE",
                 f"/rest/v1/user/{self.authorization.user_id}/token/{self.authorization.token}",
@@ -98,6 +95,8 @@ class SagemcomModemSessionClient:
                 await self._login()
             headers["Authorization"] = f"Bearer {self.authorization.token}"
 
+        if json:
+            headers["Content-Type"] = "application/json"
 
         t0 = time.time()
 

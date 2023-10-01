@@ -5,6 +5,9 @@ description = ""
 authors = ["Ties de Kock <ties@tiesdekock.nl>"]
 readme = "README.md"
 
+[project.scripts]
+f3896-cli = "sagemcom_f3896_client.cli:cli"
+
 [tool.poetry.dependencies]
 python = "^3.10"
 aiohttp = "^3.8.5"
