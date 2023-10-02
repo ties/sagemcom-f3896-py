@@ -37,18 +37,20 @@ def client(event_loop):
 
     event_loop.run_until_complete(client._logout())
 
-@pytestmark.asyncio
+@requires_modem_password()
+@pytest.mark.asyncio
 async def test_echo(
     client: SagemcomModemSessionClient, caplog: LogCaptureFixture
 ):
     caplog.set_level(logging.DEBUG)
 
-    randint = random.nextint(0, 1_000_000)
+    randint = random.randint(0, 1_000_000)
 
     echoed = await client.echo({"value": randint})
     assert echoed["value"] == randint
 
 
+@requires_modem_password()
 @pytest.mark.asyncio
 async def test_modem_state(
     client: SagemcomModemSessionClient, caplog: LogCaptureFixture
@@ -117,13 +119,13 @@ async def test_modem_downstreams(
 
         match ds.channel_type:
             case "sc_qam":
-                assert ds.frequency > 0 and ds.frequency < 1000
+                assert ds.frequency > 10_000_000 and ds.frequency < 1_000_000_000
                 assert ds.snr > 0
                 assert ds.modulation in ("qam_256",)
             case "ofdm":
                 # in mhz
-                assert ds.channel_width > 1 and ds.channel_width < 1000
-                assert ds.fft_type in ("4K",)
+                assert ds.channel_width > 1_000_000 and ds.channel_width < 170_000_000
+                assert ds.fft_type in ("2K", "4K", "8K", "16K")
                 assert ds.number_of_active_subcarriers > 0
                 assert ds.modulation in (
                     "qam_4096",
@@ -147,7 +149,7 @@ async def test_modem_upstreams(
 
     for us in upstreams:
         assert us.channel_id > 0
-        assert us.frequency > 0 and us.frequency < 1000
+        assert us.frequency > 10_000_000 and us.frequency < 1_000_000_000
         assert us.lock_status is not None
         assert us.power > -50 and us.power < 50
         assert us.modulation in ("qam_64", "qam_256")
