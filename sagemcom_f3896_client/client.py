@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 
@@ -5,6 +6,8 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict, List, Literal, Optional
 
 import aiohttp
+
+from sagemcom_f3896_client.exception import LoginFailedException
 
 from .models import (
     UserAuthorisationResult,
@@ -33,6 +36,7 @@ UNAUTHORIZED_ENDPOINTS = set([
     "rest/v1/cablemodem/serviceflows",
     "rest/v1/cablemodem/registration",
     "rest/v1/system/gateway/provisioning",
+    "rest/v1/echo"
 ])
 
 for endpoint in UNAUTHORIZED_ENDPOINTS:
@@ -110,8 +114,11 @@ class SagemcomModemSessionClient:
         if not disable_auth and requires_auth(path):
             # log in because this endpoint requires authentication
             if not self.authorization:
-                LOG.debug("logging in because '%s' requires authentication", path)
-                await self._login()
+                try:
+                    LOG.debug("logging in because '%s' requires authentication", path)
+                    await self._login()
+                except (aiohttp.ClientResponseError, aiohttp.client_exceptions.ClientConnectorError, asyncio.TimeoutError) as e:
+                    raise LoginFailedException("Failed to login to modem at %s" % self.base_url) from e
             headers["Authorization"] = f"Bearer {self.authorization.token}"
 
         if json:
@@ -161,7 +168,12 @@ class SagemcomModemSessionClient:
     async def system_reboot(self) -> bool:
         async with self.__request("POST", "/rest/v1/system/reboot", json={"reboot": {"enable": True}}) as resp:
             body = await resp.json()
-            return "accepted" in body
+            if "accepted" in body:
+                # We are now no longer logged in after the reboot
+                self.authorization = None
+                return True
+            return False
+
 
 
     async def modem_downstreams(
@@ -205,5 +217,5 @@ async def SagemcomModemClient(
         finally:
             try:
                 await client._logout()
-            except aiohttp.ClientResponseError:
+            except (aiohttp.ClientResponseError, aiohttp.client_exceptions.ClientConnectorError, asyncio.TimeoutError):
                 LOG.debug(f"HTTP error during logout", exc_info=True)

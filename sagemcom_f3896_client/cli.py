@@ -43,23 +43,21 @@ async def print_log():
             click.echo(f"{entry.time.ctime()} {priority} {entry.message}")
 
 async def do_reboot():
+    t0 = time.time()
+    click.echo("Rebooting modem...", color="red")
+    async with build_client(timeout=30) as client:
+        await client.system_reboot()
+    click.echo(f"Modem rebooted in {time.time()-t0:.2f}s", color="green")
     async with build_client(timeout=1) as client:
-        click.echo("Rebooting modem...", color="red")
-        t0 = time.time()
-        try:
-            await client.system_reboot()
-        except asyncio.TimeoutError:
-            # sporadically happens to reboot before sending response
-            pass
         had_failure = False
 
         width = 0
         while True:
+            width += 1
             try:
                 res = await client.echo({"ping": True})
-                width += 1
                 click.echo(".", nl=width % 80 == 0)
-                if had_failure:
+                if (res is not None and res["ping"]) and had_failure:
                     break
             except (asyncio.TimeoutError, aiohttp.client_exceptions.ClientConnectorError):
                 click.echo("x", nl=False)
