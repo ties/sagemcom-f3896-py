@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import math
 import time
 import aiohttp
@@ -41,6 +42,21 @@ async def print_log():
                     priority = entry.priority
 
             click.echo(f"{entry.time.ctime()} {priority} {entry.message}")
+
+async def print_status():
+    async with build_client() as client:
+        status = await client.system_state()
+        click.echo(f"| -------------- | ---------------------------- |")
+        click.echo(f"| MAC address    | {status.mac_address:>28} |")
+        click.echo(f"| Serial number  | {status.serial_number:>28} |")
+        uptime = datetime.timedelta(seconds=status.up_time)
+        click.echo(f"| Uptime         | {str(uptime):>28} |")
+        click.echo(f"| Boot file      | {status.boot_file_name:>28} |")
+        click.echo(f"| DOCSIS version | {status.docsis_version:>28} |")
+        click.echo(f"| Status         | {status.status:>28} |")
+        click.echo(f"| Max CPEs       | {status.max_cpes:>28} |")
+        click.echo(f"| Access allowed | {status.access_allowed:>28} |")
+        click.echo(f"| -------------- | ---------------------------- |")
 
 async def do_reboot():
     t0 = time.time()
@@ -88,6 +104,10 @@ def downstreams():
 @cli.command()
 def upstreams():
     asyncio.run(print_upstreams())
+
+@cli.command()
+def status():
+    asyncio.run(print_status())
 
 @cli.command()
 def reboot():
