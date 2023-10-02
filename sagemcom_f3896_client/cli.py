@@ -98,7 +98,7 @@ def cli(verbose):
         logging.basicConfig(level=logging.DEBUG)
 
 @cli.command()
-def log():
+def logs():
     asyncio.run(print_log())
 
 @cli.command()
