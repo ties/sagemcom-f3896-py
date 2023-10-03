@@ -124,11 +124,10 @@ class Exporter:
                     raise ValueError("Unknown downstream type %s" % ch.channel_type)
                 
         # from aiohttp support in prometheus-async
-        generate, content_type = aio.web._choose_generator(req.headers.get("Accept"))
+        generate, content_type = aio.web._choose_generator("*/*")
         # Join the two registries
-        resp = web.Response(body=generate(registry) + generate(REGISTRY))
-        resp.content_type = content_type
-        return resp
+        # FIXME: Less hacky way of ensuring the content is OK
+        return web.Response(body=generate(registry).decode("utf-8").strip() + "\n" + generate(REGISTRY).decode("utf-8"))
 
     async def index(self, req) -> str:
         logs = await self.client.modem_event_log()
