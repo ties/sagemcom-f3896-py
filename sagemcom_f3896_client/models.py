@@ -90,7 +90,6 @@ class ModemDownstreamChannelResult:
 
 @dataclass(kw_only=True)
 class ModemQAMDownstreamChannelResult(ModemDownstreamChannelResult):
-    channel_id: int
     # in DB (int)
     snr: int
     modulation: str
@@ -194,7 +193,7 @@ class ModemOFDMAUpstreamChannelResult(ModemUpstreamChannelResult):
             lock_status=elem["lockStatus"],
             power=elem["power"] / 10,
             modulation=elem["modulation"],
-            channel_width=elem["channelWidth"] / 1_000_000,
+            channel_width=elem["channelWidth"],
             fft_type=elem["fftType"],
             # inconsistent capitals in the JSON
             number_of_active_subcarriers=elem["numberOfActiveSubCarriers"],
