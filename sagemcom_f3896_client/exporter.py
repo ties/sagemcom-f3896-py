@@ -5,12 +5,14 @@ import os
 
 from aiohttp import web
 from prometheus_async import aio
-from prometheus_client import CollectorRegistry, Gauge, Info
+from prometheus_client import REGISTRY, CollectorRegistry, Gauge, Info, Summary
 
 from sagemcom_f3896_client.client import SagemcomModemClient, SagemcomModemSessionClient
 
 
 LOG = logging.getLogger(__name__)
+
+MODEM_METRICS_DURATION = Summary('modem_metrics_processing_seconds', 'Time spent processing modem metrics')
         
 
 class Exporter:
@@ -41,6 +43,7 @@ class Exporter:
         while True:
             await asyncio.sleep(3600)
 
+    @aio.time(MODEM_METRICS_DURATION)
     async def metrics(self, req: web.Request) -> web.Response:
         """Gather metrics and return a built response"""
         registry = CollectorRegistry()
@@ -69,7 +72,6 @@ class Exporter:
         metric_downstream_qam_info = Info("modem_downstream_qam_info", "Downstream info", ["channel", "channel_type"], registry=registry)
 
         metric_downstream_ofdm_info = Info("modem_downstream_ofdm_info", "Downstream info", ["channel", "channel_type"], registry=registry)
-
 
         # gather metrics in parallel
         state, system_info, downstreams, upstreams = await asyncio.gather(
@@ -123,7 +125,8 @@ class Exporter:
                 
         # from aiohttp support in prometheus-async
         generate, content_type = aio.web._choose_generator(req.headers.get("Accept"))
-        resp = web.Response(body=generate(registry))
+        # Join the two registries
+        resp = web.Response(body=generate(registry) + generate(REGISTRY))
         resp.content_type = content_type
         return resp
 
