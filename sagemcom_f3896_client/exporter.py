@@ -78,6 +78,8 @@ class Exporter:
             self.client.modem_downstreams(),
             self.client.modem_upstreams(),
         )
+        # async logout so we do not block the web interface
+        asyncio.create_task(self.client._logout())
 
         metric_modem_info.info({"mac": state.mac_address, "serial": state.serial_number, "software_version": system_info.software_version, "hardware_version": system_info.hardware_version, "boot_file_name": state.boot_file_name})
         metric_modem_uptime.set(state.up_time)

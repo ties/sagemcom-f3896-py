@@ -52,6 +52,8 @@ class SagemcomModemSessionClient:
     password: str
     authorization: Optional[UserAuthorisationResult] = None
 
+    __login_semaphore = asyncio.Semaphore(1)
+
     def __init__(
         self, session: aiohttp.ClientSession, base_url: str, password: str
     ) -> None:
@@ -93,10 +95,11 @@ class SagemcomModemSessionClient:
             assert res.status == 204
 
     async def _logout(self) -> None:
-        if self.authorization:
-            LOG.debug("Logging out session userId=%d", self.authorization.user_id)
-            await self.delete_token(self.authorization.user_id, self.authorization.token)
-            self.authorization = None
+        async with self.__login_semaphore:
+            if self.authorization:
+                LOG.debug("Logging out session userId=%d", self.authorization.user_id)
+                await self.delete_token(self.authorization.user_id, self.authorization.token)
+                self.authorization = None
 
     @asynccontextmanager
     async def __request(
@@ -115,8 +118,11 @@ class SagemcomModemSessionClient:
             # log in because this endpoint requires authentication
             if not self.authorization:
                 try:
-                    LOG.debug("logging in because '%s' requires authentication", path)
-                    await self._login()
+                    async with self.__login_semaphore:
+                        # re-check since parallel thread may have logged in
+                        if not self.authorization:
+                            LOG.debug("logging in because '%s' requires authentication", path)
+                            await self._login()
                 except (aiohttp.ClientResponseError, aiohttp.client_exceptions.ClientConnectorError, asyncio.TimeoutError) as e:
                     raise LoginFailedException("Failed to login to modem at %s" % self.base_url) from e
             headers["Authorization"] = f"Bearer {self.authorization.token}"
