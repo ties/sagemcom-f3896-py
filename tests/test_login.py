@@ -1,9 +1,9 @@
 import logging
 
 import pytest
+
 from sagemcom_f3896_client.client import SagemcomModemClient
 from sagemcom_f3896_client.exception import LoginFailedException
-
 from sagemcom_f3896_client.util import build_client
 from tests.util import requires_modem_password
 
@@ -27,9 +27,10 @@ async def test_login__failure_error(caplog):
     caplog.set_level(logging.DEBUG)
 
     with pytest.raises(LoginFailedException):
-        async with SagemcomModemClient("http://192.168.100.1", password="DEADBEEF") as client:
+        async with SagemcomModemClient(
+            "http://192.168.100.1", password="DEADBEEF"
+        ) as client:
             await client._login()
-
 
 
 @requires_modem_password()

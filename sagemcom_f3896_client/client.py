@@ -74,14 +74,17 @@ class SagemcomModemSessionClient:
 
     async def _login(self) -> Dict[str, str]:
         try:
-            async with self.__request("POST", "/rest/v1/user/login", {"password": self.password}) as res:
+            async with self.__request(
+                "POST", "/rest/v1/user/login", {"password": self.password}
+            ) as res:
                 assert res.status == 201
 
                 body = await res.json()
                 self.authorization = UserAuthorisationResult.build(body)
         except aiohttp.ClientResponseError as e:
-            raise LoginFailedException("Failed to login to modem at %s" % self.base_url) from e
-
+            raise LoginFailedException(
+                "Failed to login to modem at %s" % self.base_url
+            ) from e
 
     async def user_tokens(self, user_id, password) -> UserTokenResult:
         async with self.__request(
