@@ -15,4 +15,4 @@ def build_client(*args, **kwargs):
     modem_password = os.environ.get("MODEM_PASSWORD")
     assert modem_password, "MODEM_PASSWORD environment variable is not set"
 
-    return SagemcomModemClient("http://192.168.100.1", modem_password, *args, **kwargs)
+    return SagemcomModemClient(modem_url, modem_password, *args, **kwargs)

@@ -73,13 +73,15 @@ class SagemcomModemSessionClient:
         }
 
     async def _login(self) -> Dict[str, str]:
-        async with self.__request(
-            "POST", "/rest/v1/user/login", {"password": self.password}
-        ) as res:
-            assert res.status == 201
+        try:
+            async with self.__request("POST", "/rest/v1/user/login", {"password": self.password}) as res:
+                assert res.status == 201
 
-            body = await res.json()
-            self.authorization = UserAuthorisationResult.build(body)
+                body = await res.json()
+                self.authorization = UserAuthorisationResult.build(body)
+        except aiohttp.ClientResponseError as e:
+            raise LoginFailedException("Failed to login to modem at %s" % self.base_url) from e
+
 
     async def user_tokens(self, user_id, password) -> UserTokenResult:
         async with self.__request(
@@ -127,20 +129,13 @@ class SagemcomModemSessionClient:
         if not disable_auth and requires_auth(path):
             # log in because this endpoint requires authentication
             if not self.authorization:
-                try:
-                    async with self.__login_semaphore:
-                        # re-check since parallel thread may have logged in
-                        if not self.authorization:
-                            LOG.debug(
-                                "logging in because '%s' requires authentication", path
-                            )
-                            await self._login()
-                except (
-                    aiohttp.ClientResponseError,
-                ) as e:
-                    raise LoginFailedException(
-                        "Failed to login to modem at %s" % self.base_url
-                    ) from e
+                async with self.__login_semaphore:
+                    # re-check since parallel thread that was also waiting may have logged in
+                    if not self.authorization:
+                        LOG.debug(
+                            "logging in because '%s' requires authentication", path
+                        )
+                        await self._login()
             headers["Authorization"] = f"Bearer {self.authorization.token}"
 
         if json:
