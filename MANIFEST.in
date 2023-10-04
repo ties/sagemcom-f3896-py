@@ -1,0 +1,11 @@
+exclude poetry.lock
+exclude .pre-commit-config.yaml
+exclude .flake8
+exclude .dockerignore
+exclude Dockerfile
+
+global-exclude .gitkeep .gitignore .DS_Store
+
+prune tests
+prunt .github
+prunt .vscode
