@@ -1,3 +1,4 @@
+exclude MANIFEST.in
 exclude poetry.lock
 exclude .pre-commit-config.yaml
 exclude .flake8
