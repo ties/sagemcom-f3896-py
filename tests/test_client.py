@@ -162,7 +162,7 @@ async def test_modem_upstreams(
                 assert us.t1_timeouts >= 0
                 assert us.t2_timeouts >= 0
             case "ofdma":
-                assert us.channel_width > 2 and us.channel_width < 200
+                assert us.channel_width > 2_000_000 and us.channel_width < 200_000_000
                 assert us.fft_type in ("4K", "2K")
                 assert us.number_of_active_subcarriers > 0
             case _:

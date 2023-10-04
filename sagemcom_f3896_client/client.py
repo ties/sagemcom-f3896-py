@@ -137,8 +137,6 @@ class SagemcomModemSessionClient:
                             await self._login()
                 except (
                     aiohttp.ClientResponseError,
-                    aiohttp.client_exceptions.ClientConnectorError,
-                    asyncio.TimeoutError,
                 ) as e:
                     raise LoginFailedException(
                         "Failed to login to modem at %s" % self.base_url
