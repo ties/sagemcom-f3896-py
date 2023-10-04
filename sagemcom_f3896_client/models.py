@@ -20,6 +20,7 @@ class UserAuthorisationResult:
             user_id=body["created"]["userId"],
         )
 
+
 @dataclass
 class UserTokenResult:
     token: str
@@ -113,6 +114,7 @@ class ModemQAMDownstreamChannelResult(ModemDownstreamChannelResult):
 @dataclass(kw_only=True)
 class ModemOFDMDownstreamChannelResult(ModemDownstreamChannelResult):
     """In hz"""
+
     channel_width: float
     fft_type: Literal["2K", "4K", "8K", "16K"]
     number_of_active_subcarriers: int
@@ -166,12 +168,10 @@ class ModemATDMAUpstreamChannelResult(ModemUpstreamChannelResult):
             lock_status=elem["lockStatus"],
             power=elem["power"],
             modulation=elem["modulation"],
-
             frequency=elem["frequency"],
             symbol_rate=elem["symbolRate"],
             t1_timeouts=elem["t1Timeout"],
             t2_timeouts=elem["t2Timeout"],
-
             t3_timeouts=elem["t3Timeout"],
             t4_timeouts=elem["t4Timeout"],
         )
@@ -189,7 +189,6 @@ class ModemOFDMAUpstreamChannelResult(ModemUpstreamChannelResult):
             channel_type=elem["channelType"],
             channel_id=elem["channelId"],
             frequency=elem["firstActiveSubcarrier"] * 1_000_000,
-
             lock_status=elem["lockStatus"],
             power=elem["power"] / 10,
             modulation=elem["modulation"],
@@ -248,9 +247,10 @@ class SystemInfoResult:
             hardware_version=body["info"]["hardwareVersion"],
         )
 
+
 @dataclass
 class SystemProvisioningResponse:
-    provisioning_mode: Literal['enable', 'disable']
+    provisioning_mode: Literal["enable", "disable"]
     mac_address: str
     ds_lite_enabled: bool
 

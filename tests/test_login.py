@@ -8,6 +8,7 @@ from tests.util import requires_modem_password
 logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger(__name__)
 
+
 @requires_modem_password()
 @pytest.mark.asyncio
 async def test_login_logout(caplog):

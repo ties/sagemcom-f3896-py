@@ -37,11 +37,10 @@ def client(event_loop):
 
     event_loop.run_until_complete(client._logout())
 
+
 @requires_modem_password()
 @pytest.mark.asyncio
-async def test_echo(
-    client: SagemcomModemSessionClient, caplog: LogCaptureFixture
-):
+async def test_echo(client: SagemcomModemSessionClient, caplog: LogCaptureFixture):
     caplog.set_level(logging.DEBUG)
 
     randint = random.randint(0, 1_000_000)
@@ -168,7 +167,7 @@ async def test_modem_upstreams(
                 assert us.number_of_active_subcarriers > 0
             case _:
                 raise ValueError(f"unknown channel_type: {us.channel_type}")
-            
+
 
 @requires_modem_password()
 @pytest.mark.asyncio
