@@ -36,6 +36,7 @@ async def test_login__failure_error(caplog):
 @requires_modem_password()
 @pytest.mark.asyncio
 async def test_create_tokens__not_logged_in(caplog):
+    """Implicitly logs in because it's an authenticated endpoint."""
     caplog.set_level(logging.DEBUG)
 
     client_wrapper = build_client()

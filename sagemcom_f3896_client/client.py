@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from typing import AsyncGenerator, Dict, List, Literal, Optional
 
 import aiohttp
@@ -225,23 +226,37 @@ class SagemcomModemSessionClient:
             return SystemProvisioningResponse.build(await resp.json())
 
 
-@asynccontextmanager
-async def SagemcomModemClient(
-    base_url: str, password: str, timeout: int = 5
-) -> AsyncGenerator[SagemcomModemSessionClient, None]:
-    timeout = aiohttp.ClientTimeout(total=timeout)
-    conn = aiohttp.TCPConnector(limit_per_host=30, force_close=True)
+class SagemcomModemClient:
+    base_url: str
+    password: str
+    timeout: int = 5
 
-    async with aiohttp.ClientSession(timeout=timeout, connector=conn) as session:
-        client = SagemcomModemSessionClient(session, base_url, password)
+    session: ContextVar[aiohttp.ClientSession] = ContextVar("session")
+    client: ContextVar[SagemcomModemSessionClient] = ContextVar("client")
+
+    def __init__(self, base_url: str, password: str, timeout: int = 5) -> None:
+        self.base_url = base_url
+        self.password = password
+        self.timeout = timeout
+
+    async def __aenter__(self) -> SagemcomModemSessionClient:
+        timeout = aiohttp.ClientTimeout(total=self.timeout)
+        conn = aiohttp.TCPConnector(limit_per_host=30, force_close=True)
+
+        self.session.set(aiohttp.ClientSession(timeout=timeout, connector=conn))
+        self.client.set(
+            SagemcomModemSessionClient(self.session.get(), self.base_url, self.password)
+        )
+        return self.client.get()
+
+    async def __aexit__(self, *args) -> None:
         try:
-            yield client
-        finally:
-            try:
-                await client._logout()
-            except (
-                aiohttp.ClientResponseError,
-                aiohttp.client_exceptions.ClientConnectorError,
-                asyncio.TimeoutError,
-            ):
-                LOG.debug("HTTP error during logout", exc_info=True)
+            await self.client.get()._logout()
+        except (
+            aiohttp.ClientResponseError,
+            aiohttp.client_exceptions.ClientConnectorError,
+            asyncio.TimeoutError,
+        ):
+            LOG.debug("HTTP error during logout", exc_info=True)
+
+        await self.session.get().close()
