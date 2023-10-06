@@ -1,0 +1,4 @@
+{
+  "ext": "*.py",
+  "exec": "poetry run python3 -m sagemcom_f3896_client.exporter -v"
+}

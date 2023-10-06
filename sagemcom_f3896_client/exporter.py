@@ -130,14 +130,14 @@ class Exporter:
             registry=registry,
         )
         metric_downstream_qam_info = Info(
-            "modem_downstream_qam_info",
+            "modem_downstream_qam",
             "Downstream info",
             ["channel", "channel_type"],
             registry=registry,
         )
 
         metric_downstream_ofdm_info = Info(
-            "modem_downstream_ofdm_info",
+            "modem_downstream_ofdm",
             "Downstream info",
             ["channel", "channel_type"],
             registry=registry,
@@ -283,6 +283,28 @@ class Exporter:
         return web.Response(
             text=f"""<html>
             <head><title>Sagemcom F3896</title></head>
+            <style>
+                body {{
+                    font-family: helvetica, arial, sans-serif;
+                }}
+
+                emph {{
+                    font-weight: bold;
+                }}
+
+                table {{
+                    font-size: 75%;
+                }}
+
+                thead td {{
+                    font-weight: bold;
+                    padding: 0.5em;
+                }}
+
+                td {{
+                    padding: 0 0.5em;
+                }}
+            </style>
             <body>
                 <h1>SagemCom F3896</h1>
                 <p><a href="/metrics">Metrics</a></p>
@@ -294,7 +316,7 @@ class Exporter:
                     <tbody>
                     {''.join(
                         [
-                            f"<tr><td>{entry.time.ctime()}</td><td>{entry.priority}</td><td>{entry.message}</td></tr>"
+                            f"<tr><td>{entry.time.ctime()}</td><td>{'<emph>' if entry.priority == 'error' else ''}{entry.priority}</td><td>{entry.message}</td></tr>"
                             for entry in logs
                         ]
                     )}
