@@ -1,12 +1,13 @@
 import logging
 import os
+
 import aiohttp
 import pytest
 
 from sagemcom_f3896_client.client import SagemcomModemSessionClient
 
-
 LOG = logging.getLogger(__name__)
+
 
 @pytest.fixture
 def client(event_loop):

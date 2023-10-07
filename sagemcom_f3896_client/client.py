@@ -172,7 +172,11 @@ class SagemcomModemSessionClient:
     async def modem_event_log(self) -> List[EventLogItem]:
         async with self.__request("GET", "/rest/v1/cablemodem/eventlog") as resp:
             res = await resp.json()
-            return sorted([EventLogItem.build(e) for e in res["eventlog"]], key=operator.attrgetter('time'), reverse=True)
+            return sorted(
+                [EventLogItem.build(e) for e in res["eventlog"]],
+                key=operator.attrgetter("time"),
+                reverse=True,
+            )
 
     async def modem_service_flows(self) -> List[ModemServiceFlowResult]:
         async with self.__request("GET", "/rest/v1/cablemodem/serviceflows") as resp:

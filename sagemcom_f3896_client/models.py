@@ -49,7 +49,7 @@ class EventLogItem:
             priority=elem["priority"],
             message=elem["message"],
         )
-    
+
     def parse(self) -> ParsedMessage:
         return parse_line(self.message)
 
