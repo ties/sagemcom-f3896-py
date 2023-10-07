@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-from typing import List
 
 import click
 from aiohttp import web
@@ -13,7 +12,6 @@ from sagemcom_f3896_client.log_parser import (
     DownstreamProfileMessage,
     UpstreamProfileMessage,
 )
-from sagemcom_f3896_client.models import EventLogItem
 
 LOG = logging.getLogger(__name__)
 
@@ -57,7 +55,6 @@ class Exporter:
         # create metrics
         metric_modem_info = Info("modem_info", "Modem information", registry=registry)
         metric_modem_uptime = Gauge("modem_uptime", "Uptime", registry=registry)
-
 
         # gather metrics in parallel
         state, system_info, _, _, _ = await asyncio.gather(
@@ -184,8 +181,10 @@ class Exporter:
                     )
                 case _:
                     raise ValueError("Unknown channel type: %s" % ch.channel_type)
-                
-    async def __update_downstream_channel_metrics(self, registry: CollectorRegistry) -> None:
+
+    async def __update_downstream_channel_metrics(
+        self, registry: CollectorRegistry
+    ) -> None:
         metric_downstream_frequency = Gauge(
             "modem_downstream_frequency",
             "Downstream frequency",
@@ -287,8 +286,9 @@ class Exporter:
                 case _:
                     raise ValueError("Unknown downstream type %s" % ch.channel_type)
 
-
-    async def __update_channel_profile_metrics(self, registry: CollectorRegistry) -> None:
+    async def __update_channel_profile_metrics(
+        self, registry: CollectorRegistry
+    ) -> None:
         metric_channel_profile = Gauge(
             "modem_channel_profile",
             "Profile assigned to channel",
