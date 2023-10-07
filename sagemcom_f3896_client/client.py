@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import operator
 import time
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
@@ -171,7 +172,7 @@ class SagemcomModemSessionClient:
     async def modem_event_log(self) -> List[EventLogItem]:
         async with self.__request("GET", "/rest/v1/cablemodem/eventlog") as resp:
             res = await resp.json()
-            return [EventLogItem.build(e) for e in res["eventlog"]]
+            return sorted([EventLogItem.build(e) for e in res["eventlog"]], key=operator.attrgetter('time'), reverse=True)
 
     async def modem_service_flows(self) -> List[ModemServiceFlowResult]:
         async with self.__request("GET", "/rest/v1/cablemodem/serviceflows") as resp:

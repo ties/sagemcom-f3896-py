@@ -3,6 +3,8 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Literal
 
+from sagemcom_f3896_client.log_parser import ParsedMessage, parse_line
+
 LOG = logging.getLogger(__name__)
 
 
@@ -36,17 +38,20 @@ class UserTokenResult:
 
 @dataclass
 class EventLogItem:
-    priority: Literal["error", "notice", "critical", "warning"]
     time: datetime.datetime
+    priority: Literal["error", "notice", "critical", "warning"]
     message: str
 
     @staticmethod
     def build(elem: Dict[str, str]) -> List["EventLogItem"]:
         return EventLogItem(
-            priority=elem["priority"],
             time=datetime.datetime.fromisoformat(elem["time"]),
+            priority=elem["priority"],
             message=elem["message"],
         )
+    
+    def parse(self) -> ParsedMessage:
+        return parse_line(self.message)
 
 
 @dataclass

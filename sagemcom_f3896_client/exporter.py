@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from typing import List
 
 import click
 from aiohttp import web
@@ -8,6 +9,8 @@ from prometheus_async import aio
 from prometheus_client import REGISTRY, CollectorRegistry, Gauge, Info, Summary
 
 from sagemcom_f3896_client.client import SagemcomModemClient, SagemcomModemSessionClient
+from sagemcom_f3896_client.log_parser import DownstreamProfileMessage, UpstreamProfileMessage
+from sagemcom_f3896_client.models import EventLogItem
 
 LOG = logging.getLogger(__name__)
 
@@ -144,11 +147,12 @@ class Exporter:
         )
 
         # gather metrics in parallel
-        state, system_info, downstreams, upstreams = await asyncio.gather(
+        state, system_info, downstreams, upstreams, modem_log = await asyncio.gather(
             self.client.system_state(),
             self.client.system_info(),
             self.client.modem_downstreams(),
             self.client.modem_upstreams(),
+            self.client.modem_event_log(),
         )
         # async logout so we do not block the web interface
         asyncio.create_task(self.client._logout())
@@ -163,6 +167,9 @@ class Exporter:
             }
         )
         metric_modem_uptime.set(state.up_time)
+
+        # track the profiles used for the channels
+        self.__update_channel_profile_metrics(registry, modem_log)
 
         for ch in upstreams:
             metric_upstream_frequency.labels(
@@ -276,6 +283,37 @@ class Exporter:
             + "\n"
             + generate(REGISTRY).decode("utf-8")
         )
+    
+    def __update_channel_profile_metrics(self, registry: CollectorRegistry, modem_log: List[EventLogItem]) -> None:
+        metric_channel_profile = Gauge(
+            "modem_channel_profile",
+            "Profile assigned to channel",
+            ["direction", "channel_id", "slot"],
+            registry=registry,
+        )
+
+        found_ds, found_us = False, False
+
+        for line in modem_log:
+            parsed = line.parse()
+            # Process the first downstream and upstream messages
+            match parsed:
+                case DownstreamProfileMessage(channel_id=channel_id, previous_profile=previous_profile, profile=profile):
+                    if not found_ds:
+                        metric_channel_profile.labels(direction="downstream", channel_id=channel_id, slot="1").set(profile[0])
+                        metric_channel_profile.labels(direction="downstream", channel_id=channel_id, slot="2").set(profile[1])
+                        metric_channel_profile.labels(direction="downstream", channel_id=channel_id, slot="3").set(profile[2])
+                    found_ds = True
+                case UpstreamProfileMessage(channel_id=channel_id, previous_profile=previous_profile, profile=profile):
+                    if not found_us:
+                        metric_channel_profile.labels(direction="upstream", channel_id=channel_id, slot="1").set(profile[0])
+                        metric_channel_profile.labels(direction="upstream", channel_id=channel_id, slot="2").set(profile[1])
+                    found_us = True
+
+            if found_ds and found_us:
+                break
+
+
 
     async def index(self, req) -> str:
         logs = await self.client.modem_event_log()
