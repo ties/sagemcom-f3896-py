@@ -58,6 +58,40 @@ class Exporter:
         metric_modem_info = Info("modem_info", "Modem information", registry=registry)
         metric_modem_uptime = Gauge("modem_uptime", "Uptime", registry=registry)
 
+
+        # gather metrics in parallel
+        state, system_info, _, _, _ = await asyncio.gather(
+            self.client.system_state(),
+            self.client.system_info(),
+            self.__update_downstream_channel_metrics(registry),
+            self.__update_upstream_channel_metrics(registry),
+            self.__update_channel_profile_metrics(registry),
+        )
+        # async logout so we do not block the web interface
+        asyncio.create_task(self.client._logout())
+
+        metric_modem_info.info(
+            {
+                "mac": state.mac_address,
+                "serial": state.serial_number,
+                "software_version": system_info.software_version,
+                "hardware_version": system_info.hardware_version,
+                "boot_file_name": state.boot_file_name,
+            }
+        )
+        metric_modem_uptime.set(state.up_time)
+
+        # from aiohttp support in prometheus-async
+        generate, content_type = aio.web._choose_generator("*/*")
+        # Join the two registries
+        # FIXME: Less hacky way of ensuring the content is OK
+        return web.Response(
+            body=generate(registry).decode("utf-8").strip()
+            + "\n"
+            + generate(REGISTRY).decode("utf-8")
+        )
+
+    async def __update_upstream_channel_metrics(self, registry: CollectorRegistry):
         metric_upstream_frequency = Gauge(
             "modem_upstream_frequency",
             "Upstream frequency",
@@ -97,84 +131,7 @@ class Exporter:
             registry=registry,
         )
 
-        metric_downstream_frequency = Gauge(
-            "modem_downstream_frequency",
-            "Downstream frequency",
-            ["channel", "channel_type"],
-            registry=registry,
-        )
-        metric_downstream_rx_mer = Gauge(
-            "modem_downstream_rx_mer",
-            "Downstream RX MER",
-            ["channel", "channel_type"],
-            registry=registry,
-        )
-        metric_downstream_power = Gauge(
-            "modem_downstream_power",
-            "Downstream power",
-            ["channel", "channel_type"],
-            registry=registry,
-        )
-        metric_downstream_locked = Gauge(
-            "modem_downstream_locked",
-            "Downstream lock status",
-            ["channel", "channel_type"],
-            registry=registry,
-        )
-
-        metric_downstream_errors = Gauge(
-            "modem_downstream_errors",
-            "Downstream errors",
-            ["channel", "channel_type", "error_type"],
-            registry=registry,
-        )
-
-        metric_downstream_qam_snr = Gauge(
-            "modem_downstream_qam_snr",
-            "Downstream SNR",
-            ["channel", "channel_type"],
-            registry=registry,
-        )
-        metric_downstream_qam_info = Info(
-            "modem_downstream_qam",
-            "Downstream info",
-            ["channel", "channel_type"],
-            registry=registry,
-        )
-
-        metric_downstream_ofdm_info = Info(
-            "modem_downstream_ofdm",
-            "Downstream info",
-            ["channel", "channel_type"],
-            registry=registry,
-        )
-
-        # gather metrics in parallel
-        state, system_info, downstreams, upstreams, modem_log = await asyncio.gather(
-            self.client.system_state(),
-            self.client.system_info(),
-            self.client.modem_downstreams(),
-            self.client.modem_upstreams(),
-            self.client.modem_event_log(),
-        )
-        # async logout so we do not block the web interface
-        asyncio.create_task(self.client._logout())
-
-        metric_modem_info.info(
-            {
-                "mac": state.mac_address,
-                "serial": state.serial_number,
-                "software_version": system_info.software_version,
-                "hardware_version": system_info.hardware_version,
-                "boot_file_name": state.boot_file_name,
-            }
-        )
-        metric_modem_uptime.set(state.up_time)
-
-        # track the profiles used for the channels
-        self.__update_channel_profile_metrics(registry, modem_log)
-
-        for ch in upstreams:
+        for ch in await self.client.modem_upstreams():
             metric_upstream_frequency.labels(
                 channel=ch.channel_id, channel_type=ch.channel_type
             ).set(ch.frequency)
@@ -227,8 +184,61 @@ class Exporter:
                     )
                 case _:
                     raise ValueError("Unknown channel type: %s" % ch.channel_type)
+                
+    async def __update_downstream_channel_metrics(self, registry: CollectorRegistry) -> None:
+        metric_downstream_frequency = Gauge(
+            "modem_downstream_frequency",
+            "Downstream frequency",
+            ["channel", "channel_type"],
+            registry=registry,
+        )
+        metric_downstream_rx_mer = Gauge(
+            "modem_downstream_rx_mer",
+            "Downstream RX MER",
+            ["channel", "channel_type"],
+            registry=registry,
+        )
+        metric_downstream_power = Gauge(
+            "modem_downstream_power",
+            "Downstream power",
+            ["channel", "channel_type"],
+            registry=registry,
+        )
+        metric_downstream_locked = Gauge(
+            "modem_downstream_locked",
+            "Downstream lock status",
+            ["channel", "channel_type"],
+            registry=registry,
+        )
 
-        for ch in downstreams:
+        metric_downstream_errors = Gauge(
+            "modem_downstream_errors",
+            "Downstream errors",
+            ["channel", "channel_type", "error_type"],
+            registry=registry,
+        )
+
+        metric_downstream_qam_snr = Gauge(
+            "modem_downstream_qam_snr",
+            "Downstream SNR",
+            ["channel", "channel_type"],
+            registry=registry,
+        )
+        metric_downstream_qam_info = Info(
+            "modem_downstream_qam",
+            "Downstream info",
+            ["channel", "channel_type"],
+            registry=registry,
+        )
+
+        metric_downstream_ofdm_info = Info(
+            "modem_downstream_ofdm",
+            "Downstream info",
+            ["channel", "channel_type"],
+            registry=registry,
+        )
+
+        for ch in await self.client.modem_downstreams():
             metric_downstream_frequency.labels(
                 channel=ch.channel_id, channel_type=ch.channel_type
             ).set(ch.frequency)
@@ -277,19 +287,8 @@ class Exporter:
                 case _:
                     raise ValueError("Unknown downstream type %s" % ch.channel_type)
 
-        # from aiohttp support in prometheus-async
-        generate, content_type = aio.web._choose_generator("*/*")
-        # Join the two registries
-        # FIXME: Less hacky way of ensuring the content is OK
-        return web.Response(
-            body=generate(registry).decode("utf-8").strip()
-            + "\n"
-            + generate(REGISTRY).decode("utf-8")
-        )
 
-    def __update_channel_profile_metrics(
-        self, registry: CollectorRegistry, modem_log: List[EventLogItem]
-    ) -> None:
+    async def __update_channel_profile_metrics(self, registry: CollectorRegistry) -> None:
         metric_channel_profile = Gauge(
             "modem_channel_profile",
             "Profile assigned to channel",
@@ -299,7 +298,7 @@ class Exporter:
 
         found_ds, found_us = False, False
 
-        for line in modem_log:
+        for line in await self.client.modem_event_log():
             parsed = line.parse()
             # Process the first downstream and upstream messages
             match parsed:
