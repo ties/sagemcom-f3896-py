@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 
+import aiohttp
 import click
 from aiohttp import web
 from prometheus_async import aio
@@ -57,15 +58,26 @@ class Exporter:
         metric_modem_uptime = Gauge("modem_uptime", "Uptime", registry=registry)
 
         # gather metrics in parallel
-        state, system_info, _, _, _ = await asyncio.gather(
-            self.client.system_state(),
-            self.client.system_info(),
-            self.__update_downstream_channel_metrics(registry),
-            self.__update_upstream_channel_metrics(registry),
-            self.__update_channel_profile_metrics(registry),
-        )
-        # async logout so we do not block the web interface
-        asyncio.create_task(self.client._logout())
+        try:
+            state, system_info, _, _, _ = await asyncio.gather(
+                self.client.system_state(),
+                self.client.system_info(),
+                self.__update_downstream_channel_metrics(registry),
+                self.__update_upstream_channel_metrics(registry),
+                self.__update_channel_profile_metrics(registry),
+            )
+        except (
+            aiohttp.ClientResponseError,
+            aiohttp.client_exceptions.ClientConnectorError,
+            asyncio.TimeoutError,
+        ) as e:
+            LOG.exception("Failed to gather metrics")
+            raise web.HTTPServiceUnavailable(
+                body=f"Failed to gather metrics: {e}", headers={"Retry-After": "60"}
+            )
+        finally:
+            # async logout so we do not block the web interface
+            asyncio.create_task(self.client._logout())
 
         metric_modem_info.info(
             {

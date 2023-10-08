@@ -234,12 +234,12 @@ class SagemcomModemSessionClient:
 class SagemcomModemClient:
     base_url: str
     password: str
-    timeout: int = 5
+    timeout: int
 
     session: ContextVar[aiohttp.ClientSession] = ContextVar("session")
     client: ContextVar[SagemcomModemSessionClient] = ContextVar("client")
 
-    def __init__(self, base_url: str, password: str, timeout: int = 5) -> None:
+    def __init__(self, base_url: str, password: str, timeout: int = 15) -> None:
         self.base_url = base_url
         self.password = password
         self.timeout = timeout
