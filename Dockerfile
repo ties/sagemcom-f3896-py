@@ -16,4 +16,4 @@ COPY . .
 RUN poetry install --without dev && rm -rf $POETRY_CACHE_DIR
 
 EXPOSE 8080
-CMD ["python", "-m", "poetry", "run", "python", "sagemcom_f3896_client/exporter.py", "-v"]
+CMD ["python", "-m", "poetry", "run", "python", "-m", "sagemcom_f3896_client.exporter", "-v"]
