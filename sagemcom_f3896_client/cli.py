@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import json
 import time
 
 import aiohttp
@@ -40,9 +41,10 @@ async def print_upstreams():
                     )
 
 
-async def print_log():
+async def print_log(dump_json: bool = False):
     async with build_client() as client:
-        for entry in await client.modem_event_log():
+        entries = await client.modem_event_log()
+        for entry in entries:
             match entry.priority:
                 case "critical":
                     priority = click.style(f"{entry.priority:<9}", fg="red", bold=True)
@@ -54,6 +56,9 @@ async def print_log():
                     priority = entry.priority
 
             click.echo(f"{entry.time.ctime()} {priority} {entry.message}")
+
+        if dump_json:
+            click.echo(json.dumps([e.message for e in entries]))
 
 
 async def print_status():
@@ -115,9 +120,10 @@ def cli(verbose):
         logging.basicConfig(level=logging.DEBUG)
 
 
+@click.option("--json/--no-json", default=False)
 @cli.command()
-def logs():
-    asyncio.run(print_log())
+def logs(json: bool = False):
+    asyncio.run(print_log(json))
 
 
 @cli.command()

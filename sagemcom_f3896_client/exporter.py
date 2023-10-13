@@ -10,6 +10,7 @@ from prometheus_client import REGISTRY, CollectorRegistry, Gauge, Info, Summary
 
 from sagemcom_f3896_client.client import SagemcomModemClient, SagemcomModemSessionClient
 from sagemcom_f3896_client.log_parser import (
+    CMStatusMessageOFDM,
     DownstreamProfileMessage,
     UpstreamProfileMessage,
 )
@@ -64,7 +65,7 @@ class Exporter:
                 self.client.system_info(),
                 self.__update_downstream_channel_metrics(registry),
                 self.__update_upstream_channel_metrics(registry),
-                self.__update_channel_profile_metrics(registry),
+                self.__log_based_metrics(registry),
             )
         except (
             aiohttp.ClientResponseError,
@@ -298,54 +299,68 @@ class Exporter:
                 case _:
                     raise ValueError("Unknown downstream type %s" % ch.channel_type)
 
-    async def __update_channel_profile_metrics(
-        self, registry: CollectorRegistry
-    ) -> None:
+    async def __log_based_metrics(self, registry: CollectorRegistry) -> None:
         metric_channel_profile = Gauge(
             "modem_channel_profile",
             "Profile assigned to channel",
             ["direction", "channel_id", "slot"],
             registry=registry,
         )
+        metric_ds_ofdm_profile_failure = Gauge(
+            "modem_cmstatus_info",
+            "FEC errors were over limit on one of the assigned downstream OFDM profiles of a channel",
+            ["channel_id", "profile", "type"],
+            registry=registry,
+        )
 
-        found_ds, found_us = False, False
-
-        for line in await self.client.modem_event_log():
+        for line in reversed(await self.client.modem_event_log()):
             parsed = line.parse()
             # Process the first downstream and upstream messages
             match parsed:
+                case CMStatusMessageOFDM(
+                    channel_id=channel_id,
+                    ds_id=_,
+                    event_code=event_code,
+                    profile=profile,
+                ):
+                    print(parsed)
+                    value = -1
+                    if event_code == 16:
+                        value = 1
+                    elif event_code == 24:
+                        value = 0
+
+                    metric_ds_ofdm_profile_failure.labels(
+                        channel_id=channel_id,
+                        profile=profile,
+                        type="ofdm_profile_failure",
+                    ).set(value)
+
                 case DownstreamProfileMessage(
                     channel_id=channel_id,
                     previous_profile=_,
                     profile=profile,
                 ):
-                    if not found_ds:
-                        metric_channel_profile.labels(
-                            direction="downstream", channel_id=channel_id, slot="1"
-                        ).set(profile[0])
-                        metric_channel_profile.labels(
-                            direction="downstream", channel_id=channel_id, slot="2"
-                        ).set(profile[1])
-                        metric_channel_profile.labels(
-                            direction="downstream", channel_id=channel_id, slot="3"
-                        ).set(profile[2])
-                    found_ds = True
+                    metric_channel_profile.labels(
+                        direction="downstream", channel_id=channel_id, slot="1"
+                    ).set(profile[0])
+                    metric_channel_profile.labels(
+                        direction="downstream", channel_id=channel_id, slot="2"
+                    ).set(profile[1])
+                    metric_channel_profile.labels(
+                        direction="downstream", channel_id=channel_id, slot="3"
+                    ).set(profile[2])
                 case UpstreamProfileMessage(
                     channel_id=channel_id,
                     previous_profile=_,
                     profile=profile,
                 ):
-                    if not found_us:
-                        metric_channel_profile.labels(
-                            direction="upstream", channel_id=channel_id, slot="1"
-                        ).set(profile[0])
-                        metric_channel_profile.labels(
-                            direction="upstream", channel_id=channel_id, slot="2"
-                        ).set(profile[1])
-                    found_us = True
-
-            if found_ds and found_us:
-                break
+                    metric_channel_profile.labels(
+                        direction="upstream", channel_id=channel_id, slot="1"
+                    ).set(profile[0])
+                    metric_channel_profile.labels(
+                        direction="upstream", channel_id=channel_id, slot="2"
+                    ).set(profile[1])
 
     async def index(self, req) -> str:
         logs = await self.client.modem_event_log()

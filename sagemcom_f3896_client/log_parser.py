@@ -17,7 +17,21 @@ class UpstreamProfileMessage:
     profile: Tuple[int, int]
 
 
-ParsedMessage = DownstreamProfileMessage | UpstreamProfileMessage
+@dataclass
+class CMStatusMessageOFDM:
+    """
+    Cable Modem status message for OFDM(A) channel.
+
+    Status codes are defined in table 99 in https://www.cablelabs.com/specifications/CM-SP-MULPIv3.1
+    """
+
+    channel_id: int
+    ds_id: Optional[str]
+    profile: int
+    event_code: int
+
+
+ParsedMessage = DownstreamProfileMessage | UpstreamProfileMessage | CMStatusMessageOFDM
 
 
 DS_PROFILE_RE = re.compile(
@@ -26,9 +40,22 @@ DS_PROFILE_RE = re.compile(
 US_PROFILE_RE = re.compile(
     r"US profile assignment change. US Chan ID: (?P<channel_id>\d+); Previous Profile: (?P<previous_profile>(\d+ \d+)?); New Profile: (?P<profile>\d+ \d+)\.;.*"
 )
+CM_STATUS_OFDM_RE = re.compile(
+    r"CM-STATUS message sent. Event Type Code: (?P<event_code>\d+); Chan ID: (?P<channel_id>\d+); DSID: (?P<ds_id>(\d+|N/A)); MAC Addr: N/A; OFDM/OFDMA Profile ID: (?P<profile>\d+).;.*",
+)
 
 
 def parse_line(line: str) -> Optional[ParsedMessage]:
+    match = CM_STATUS_OFDM_RE.match(line)
+    if match:
+        ds_id = match.group("ds_id")
+
+        return CMStatusMessageOFDM(
+            channel_id=int(match.group("channel_id")),
+            ds_id=int(ds_id) if ds_id != "N/A" else None,
+            event_code=int(match.group("event_code")),
+            profile=int(match.group("profile")),
+        )
     match = DS_PROFILE_RE.match(line)
     if match:
         return DownstreamProfileMessage(

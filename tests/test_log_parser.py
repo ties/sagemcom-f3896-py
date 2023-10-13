@@ -1,12 +1,15 @@
 from typing import Set
 
 from sagemcom_f3896_client.log_parser import (
+    CMStatusMessageOFDM,
     DownstreamProfileMessage,
     UpstreamProfileMessage,
     parse_line,
 )
 
 LOG_MESSAGES = [
+    "CM-STATUS message sent. Event Type Code: 24; Chan ID: 33; DSID: N/A; MAC Addr: N/A; OFDM/OFDMA Profile ID: 3.;CM-MAC=44:05:a5:a5:a5:4a;CMTS-MAC=00:01:5c:de:ad:be;CM-QOS=1.1;CM-VER=3.1;",
+    "CM-STATUS message sent. Event Type Code: 16; Chan ID: 33; DSID: N/A; MAC Addr: N/A; OFDM/OFDMA Profile ID: 3.;CM-MAC=44:05:a5:a5:a5:4a;CMTS-MAC=00:01:5c:de:ad:be;CM-QOS=1.1;CM-VER=3.1;",
     "US profile assignment change. US Chan ID: 27; Previous Profile: 10 13; New Profile: 9 13.;CM-MAC=44:05:a5:a5:a5:4a;CMTS-MAC=00:01:5c:de:ad:be;CM-QOS=1.1;CM-VER=3.1;",
     "US profile assignment change. US Chan ID: 27; Previous Profile: 9 13; New Profile: 10 13.;CM-MAC=44:05:a5:a5:a5:4a;CMTS-MAC=00:01:5c:de:ad:be;CM-QOS=1.1;CM-VER=3.1;",
     "US profile assignment change. US Chan ID: 27; Previous Profile: 10 13; New Profile: 9 13.;CM-MAC=44:05:a5:a5:a5:4a;CMTS-MAC=00:01:5c:de:ad:be;CM-QOS=1.1;CM-VER=3.1;",
@@ -78,6 +81,17 @@ def test_log_parser_integration_test():
                     assert previous_profile[0] > 0
                     assert previous_profile[1] > previous_profile[0]
                     assert previous_profile[2] > previous_profile[1]
+            case CMStatusMessageOFDM(
+                channel_id=channel_id,
+                ds_id=ds_id,
+                event_code=event_code,
+                profile=profile,
+            ):
+                assert channel_id == 33
+                assert event_code in (16, 24)
+                assert profile == 3
+                assert ds_id is None
 
     assert DownstreamProfileMessage in types
     assert UpstreamProfileMessage in types
+    assert CMStatusMessageOFDM in types
