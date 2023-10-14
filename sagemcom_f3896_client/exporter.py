@@ -12,6 +12,7 @@ from sagemcom_f3896_client.client import SagemcomModemClient, SagemcomModemSessi
 from sagemcom_f3896_client.log_parser import (
     CMStatusMessageOFDM,
     DownstreamProfileMessage,
+    RebootMessage,
     UpstreamProfileMessage,
 )
 
@@ -314,11 +315,31 @@ class Exporter:
             ["channel_id", "profile", "type"],
             registry=registry,
         )
+        # Actually a Counter, but Counter would get a non-sensical (beccuse we recreate every request)
+        # _created metric.
+        metric_log_reboots = Gauge(
+            "modem_reboot_count",
+            "Number of reboots in modem log",
+            registry=registry,
+        )
 
-        for line in reversed(await self.client.modem_event_log()):
-            parsed = line.parse()
+        # parse the log lines
+        log_messages = [
+            line.parse() for line in reversed(await self.client.modem_event_log())
+        ]
+
+        # count reboots and find the last, so we only parse messages
+        # that apply to this power cycle.
+        last_reboot_idx = 0
+        for idx, message in enumerate(log_messages):
+            match message:
+                case RebootMessage(reason=_):
+                    metric_log_reboots.inc()
+                    last_reboot_idx = idx
+
+        for message in log_messages[last_reboot_idx:]:
             # Process the first downstream and upstream messages
-            match parsed:
+            match message:
                 case CMStatusMessageOFDM(
                     channel_id=channel_id,
                     ds_id=_,
