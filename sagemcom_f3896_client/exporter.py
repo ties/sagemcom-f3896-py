@@ -121,6 +121,7 @@ class Exporter:
             registry=registry,
         )
 
+        # Technically a counter, but value of a counter can not be set
         metric_upstream_timeouts = Gauge(
             "modem_upstream_timeouts",
             "Upstream timeouts by type",
@@ -223,6 +224,7 @@ class Exporter:
             registry=registry,
         )
 
+        # Technically a counter, but counter value can not be set
         metric_downstream_errors = Gauge(
             "modem_downstream_errors",
             "Downstream errors",
@@ -323,7 +325,6 @@ class Exporter:
                     event_code=event_code,
                     profile=profile,
                 ):
-                    print(parsed)
                     value = -1
                     if event_code == 16:
                         value = 1
