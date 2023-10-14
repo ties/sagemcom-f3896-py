@@ -3,6 +3,7 @@ from typing import Set
 from sagemcom_f3896_client.log_parser import (
     CMStatusMessageOFDM,
     DownstreamProfileMessage,
+    RebootMessage,
     UpstreamProfileMessage,
     parse_line,
 )
@@ -52,19 +53,16 @@ def test_log_parser_integration_test():
         parsed = parse_line(line)
         types.add(type(parsed))
         match parsed:
-            case UpstreamProfileMessage(
+            case CMStatusMessageOFDM(
                 channel_id=channel_id,
-                previous_profile=previous_profile,
+                ds_id=ds_id,
+                event_code=event_code,
                 profile=profile,
             ):
-                assert channel_id > 0
-                assert len(profile) == 2
-                assert profile[0] > 0
-                assert profile[1] > profile[0]
-
-                if previous_profile is not None:
-                    assert previous_profile[0] > 0
-                    assert previous_profile[1] > previous_profile[0]
+                assert channel_id == 33
+                assert event_code in (16, 24)
+                assert profile == 3
+                assert ds_id is None
             case DownstreamProfileMessage(
                 channel_id=channel_id,
                 previous_profile=previous_profile,
@@ -81,17 +79,23 @@ def test_log_parser_integration_test():
                     assert previous_profile[0] > 0
                     assert previous_profile[1] > previous_profile[0]
                     assert previous_profile[2] > previous_profile[1]
-            case CMStatusMessageOFDM(
+            case UpstreamProfileMessage(
                 channel_id=channel_id,
-                ds_id=ds_id,
-                event_code=event_code,
+                previous_profile=previous_profile,
                 profile=profile,
             ):
-                assert channel_id == 33
-                assert event_code in (16, 24)
-                assert profile == 3
-                assert ds_id is None
+                assert channel_id > 0
+                assert len(profile) == 2
+                assert profile[0] > 0
+                assert profile[1] > profile[0]
 
+                if previous_profile is not None:
+                    assert previous_profile[0] > 0
+                    assert previous_profile[1] > previous_profile[0]
+            case RebootMessage(message=message):
+                assert "Reboot UI" in message
+
+    assert CMStatusMessageOFDM in types
     assert DownstreamProfileMessage in types
     assert UpstreamProfileMessage in types
-    assert CMStatusMessageOFDM in types
+    assert RebootMessage in types

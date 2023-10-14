@@ -31,18 +31,29 @@ class CMStatusMessageOFDM:
     event_code: int
 
 
-ParsedMessage = DownstreamProfileMessage | UpstreamProfileMessage | CMStatusMessageOFDM
+@dataclass
+class RebootMessage:
+    reason: str
+
+
+ParsedMessage = (
+    CMStatusMessageOFDM
+    | DownstreamProfileMessage
+    | UpstreamProfileMessage
+    | RebootMessage
+)
 
 
 DS_PROFILE_RE = re.compile(
-    r"DS profile assignment change. DS Chan ID: (?P<channel_id>\d+); Previous Profile: (?P<previous_profile>(\d+ \d+ \d+)?); New Profile: (?P<profile>\d+ \d+ \d+)\.;.*"
-)  #
+    r"^DS profile assignment change. DS Chan ID: (?P<channel_id>\d+); Previous Profile: (?P<previous_profile>(\d+ \d+ \d+)?); New Profile: (?P<profile>\d+ \d+ \d+)\.;.*$"
+)
 US_PROFILE_RE = re.compile(
-    r"US profile assignment change. US Chan ID: (?P<channel_id>\d+); Previous Profile: (?P<previous_profile>(\d+ \d+)?); New Profile: (?P<profile>\d+ \d+)\.;.*"
+    r"^US profile assignment change. US Chan ID: (?P<channel_id>\d+); Previous Profile: (?P<previous_profile>(\d+ \d+)?); New Profile: (?P<profile>\d+ \d+)\.;.*$"
 )
 CM_STATUS_OFDM_RE = re.compile(
-    r"CM-STATUS message sent. Event Type Code: (?P<event_code>\d+); Chan ID: (?P<channel_id>\d+); DSID: (?P<ds_id>(\d+|N/A)); MAC Addr: N/A; OFDM/OFDMA Profile ID: (?P<profile>\d+).;.*",
+    r"^CM-STATUS message sent. Event Type Code: (?P<event_code>\d+); Chan ID: (?P<channel_id>\d+); DSID: (?P<ds_id>(\d+|N/A)); MAC Addr: N/A; OFDM/OFDMA Profile ID: (?P<profile>\d+).;.*$"
 )
+REBOOT_RE = re.compile(r"^Cable Modem Reboot because of - (?P<message>.*)$")
 
 
 def parse_line(line: str) -> Optional[ParsedMessage]:
@@ -75,4 +86,8 @@ def parse_line(line: str) -> Optional[ParsedMessage]:
             else None,
             profile=tuple(map(int, match.group("profile").split())),
         )
+
+    match = REBOOT_RE.match(line)
+    if match:
+        return RebootMessage(reason=match.group("message"))
     return None
