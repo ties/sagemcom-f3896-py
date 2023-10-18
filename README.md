@@ -11,6 +11,12 @@ Main goal of @ties is to have metrics from the modem, but the general structure 
 | Connectbox Giga (F3896-LG) | Ziggo (NL) | Primary development on this modem |
 
 
+## Changelog
+
+  * 18-10-2023:
+    * Keep the profile messages if they expire and channel is still present on
+      modem.
+
 ## Endpoints
 
 The client implements some endpoints. Others are:

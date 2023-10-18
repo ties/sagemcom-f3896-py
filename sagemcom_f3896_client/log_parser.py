@@ -3,21 +3,21 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class DownstreamProfileMessage:
     channel_id: int
     previous_profile: Optional[Tuple[int, int]]
     profile: Tuple[int, int]
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class UpstreamProfileMessage:
     channel_id: int
     previous_profile: Optional[Tuple[int, int]]
     profile: Tuple[int, int]
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class CMStatusMessageOFDM:
     """
     Cable Modem status message for OFDM(A) channel.
@@ -31,7 +31,7 @@ class CMStatusMessageOFDM:
     event_code: int
 
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class RebootMessage:
     reason: str
 

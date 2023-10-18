@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from typing import List, Set
 
 import aiohttp
 import click
@@ -15,6 +16,10 @@ from sagemcom_f3896_client.log_parser import (
     RebootMessage,
     UpstreamProfileMessage,
 )
+from sagemcom_f3896_client.models import (
+    ModemDownstreamChannelResult,
+    ModemUpstreamChannelResult,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -27,6 +32,11 @@ class Exporter:
     client: SagemcomModemSessionClient
     app: web.Application
     port: int
+
+    modem_downstreams: List[ModemDownstreamChannelResult] = []
+    modem_upstreams: List[ModemUpstreamChannelResult] = []
+
+    profile_messages: Set[DownstreamProfileMessage] = set()
 
     def __init__(self, client: SagemcomModemSessionClient, port: int):
         self.client = client
@@ -143,7 +153,8 @@ class Exporter:
             registry=registry,
         )
 
-        for ch in await self.client.modem_upstreams():
+        self.modem_upstreams = await self.client.modem_upstreams()
+        for ch in self.modem_upstreams:
             metric_upstream_frequency.labels(
                 channel=ch.channel_id, channel_type=ch.channel_type
             ).set(ch.frequency)
@@ -253,7 +264,9 @@ class Exporter:
             registry=registry,
         )
 
-        for ch in await self.client.modem_downstreams():
+        self.modem_downstreams = await self.client.modem_downstreams()
+
+        for ch in self.modem_downstreams:
             metric_downstream_frequency.labels(
                 channel=ch.channel_id, channel_type=ch.channel_type
             ).set(ch.frequency)
@@ -303,6 +316,13 @@ class Exporter:
                     raise ValueError("Unknown downstream type %s" % ch.channel_type)
 
     async def __log_based_metrics(self, registry: CollectorRegistry) -> None:
+        """
+        Gather metrics from the logs.
+
+        This goes through some pain to keep all profile messages for channels that are still present. There are two reasons:
+          * The modem expires log entries after enough have been produced. The downstream message is rare in known setups, so that ends to be no longer be present otherwise.
+          * We do not use the regular registry, and using that would mean explicitly deleting no longer present channels their profile
+        """
         metric_channel_profile = Gauge(
             "modem_channel_profile",
             "Profile assigned to channel",
@@ -357,7 +377,28 @@ class Exporter:
                         profile=profile,
                         type="ofdm_profile_failure",
                     ).set(value)
+                case DownstreamProfileMessage():
+                    self.profile_messages.add(message)
+                case UpstreamProfileMessage():
+                    self.profile_messages.add(message)
 
+        active_channels = frozenset(
+            c.channel_id for c in self.modem_downstreams
+        ) | frozenset(c.channel_id for c in self.modem_upstreams)
+
+        for message in self.profile_messages:
+            if (
+                self.modem_downstreams
+                and self.modem_upstreams
+                and (message.channel_id not in active_channels)
+            ):
+                LOG.info(
+                    "Ignoring profile message for no longer present channel %d",
+                    message.channel_id,
+                )
+                continue
+
+            match message:
                 case DownstreamProfileMessage(
                     channel_id=channel_id,
                     previous_profile=_,
@@ -384,7 +425,8 @@ class Exporter:
                         direction="upstream", channel_id=channel_id, slot="2"
                     ).set(profile[1])
 
-    async def index(self, req) -> str:
+    async def index(self, _: web.Request) -> str:
+        """Serve an index page."""
         logs = await self.client.modem_event_log()
 
         return web.Response(
