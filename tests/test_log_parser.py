@@ -5,7 +5,7 @@ from sagemcom_f3896_client.log_parser import (
     DownstreamProfileMessage,
     RebootMessage,
     UpstreamProfileMessage,
-    parse_line,
+    parse_message,
 )
 
 LOG_MESSAGES = [
@@ -50,7 +50,7 @@ def test_log_parser_integration_test():
     types: Set[type] = set()
 
     for line in LOG_MESSAGES:
-        parsed = parse_line(line)
+        parsed = parse_message(line)
         types.add(type(parsed))
         match parsed:
             case CMStatusMessageOFDM(

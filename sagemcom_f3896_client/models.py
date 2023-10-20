@@ -3,7 +3,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Literal
 
-from sagemcom_f3896_client.log_parser import ParsedMessage, parse_line
+from sagemcom_f3896_client.log_parser import ParsedMessage, parse_message
 
 LOG = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class EventLogItem:
         )
 
     def parse(self) -> ParsedMessage:
-        return parse_line(self.message)
+        return parse_message(self.message)
 
 
 @dataclass

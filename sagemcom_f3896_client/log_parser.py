@@ -56,8 +56,9 @@ CM_STATUS_OFDM_RE = re.compile(
 REBOOT_RE = re.compile(r"^Cable Modem Reboot because of - (?P<message>.*)$")
 
 
-def parse_line(line: str) -> Optional[ParsedMessage]:
-    match = CM_STATUS_OFDM_RE.match(line)
+def parse_message(message: str) -> Optional[ParsedMessage]:
+    """Parse a message in the modem log"""
+    match = CM_STATUS_OFDM_RE.match(message)
     if match:
         ds_id = match.group("ds_id")
 
@@ -67,7 +68,7 @@ def parse_line(line: str) -> Optional[ParsedMessage]:
             event_code=int(match.group("event_code")),
             profile=int(match.group("profile")),
         )
-    match = DS_PROFILE_RE.match(line)
+    match = DS_PROFILE_RE.match(message)
     if match:
         return DownstreamProfileMessage(
             channel_id=int(match.group("channel_id")),
@@ -77,7 +78,7 @@ def parse_line(line: str) -> Optional[ParsedMessage]:
             profile=tuple(map(int, match.group("profile").split())),
         )
 
-    match = US_PROFILE_RE.match(line)
+    match = US_PROFILE_RE.match(message)
     if match:
         return UpstreamProfileMessage(
             channel_id=int(match.group("channel_id")),
@@ -87,7 +88,7 @@ def parse_line(line: str) -> Optional[ParsedMessage]:
             profile=tuple(map(int, match.group("profile").split())),
         )
 
-    match = REBOOT_RE.match(line)
+    match = REBOOT_RE.match(message)
     if match:
         return RebootMessage(reason=match.group("message"))
     return None

@@ -342,11 +342,15 @@ class Exporter:
             "Number of reboots in modem log",
             registry=registry,
         )
+        metric_log_by_priority = Gauge(
+            "modem_log_count", "Number of log messages", ["priority"], registry=registry
+        )
 
+        log_lines = await self.client.modem_event_log()
+        for line in log_lines:
+            metric_log_by_priority.labels(priority=line.priority).inc()
         # parse the log lines
-        log_messages = [
-            line.parse() for line in reversed(await self.client.modem_event_log())
-        ]
+        log_messages = [line.parse() for line in reversed(log_lines)]
 
         # count reboots and find the last, so we only parse messages
         # that apply to this power cycle.
