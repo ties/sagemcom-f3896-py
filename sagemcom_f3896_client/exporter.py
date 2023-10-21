@@ -29,6 +29,8 @@ MODEM_METRICS_DURATION = Summary(
 
 
 class Exporter:
+    """Prometheus export for F3896"""
+
     client: SagemcomModemSessionClient
     app: web.Application
     port: int
@@ -206,7 +208,7 @@ class Exporter:
                         }
                     )
                 case _:
-                    raise ValueError("Unknown channel type: %s" % ch.channel_type)
+                    raise ValueError(f"Unknown channel type: {ch.channel_type}")
 
     async def __update_downstream_channel_metrics(
         self, registry: CollectorRegistry
@@ -264,7 +266,9 @@ class Exporter:
             registry=registry,
         )
 
-        self.modem_downstreams = await self.client.modem_downstreams()
+        self.modem_downstreams, primary_downstream = await asyncio.gather(
+            self.client.modem_downstreams(), self.client.modem_primary_downstream()
+        )
 
         for ch in self.modem_downstreams:
             metric_downstream_frequency.labels(
@@ -277,7 +281,8 @@ class Exporter:
                 channel=ch.channel_id, channel_type=ch.channel_type
             ).set(ch.power)
             metric_downstream_locked.labels(
-                channel=ch.channel_id, channel_type=ch.channel_type
+                channel=ch.channel_id,
+                channel_type=ch.channel_type,
             ).set(ch.lock_status)
 
             metric_downstream_errors.labels(
@@ -297,8 +302,16 @@ class Exporter:
                         channel=ch.channel_id, channel_type=ch.channel_type
                     ).set(ch.snr)
                     metric_downstream_qam_info.labels(
-                        channel=ch.channel_id, channel_type=ch.channel_type
-                    ).info({"modulation": ch.modulation})
+                        channel=ch.channel_id,
+                        channel_type=ch.channel_type,
+                    ).info(
+                        {
+                            "modulation": ch.modulation,
+                            "primary": "true"
+                            if ch.channel_id == primary_downstream.channel_id
+                            else "false",
+                        }
+                    )
                 case "ofdm":
                     metric_downstream_ofdm_info.labels(
                         channel=ch.channel_id, channel_type=ch.channel_type
