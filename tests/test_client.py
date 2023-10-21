@@ -144,6 +144,19 @@ async def test_modem_upstreams(
                 raise ValueError(f"unknown channel_type: {us.channel_type}")
 
 
+@pytest.mark.asyncio
+async def test_primary_downstream(
+    client: SagemcomModemSessionClient, caplog: LogCaptureFixture
+):
+    caplog.set_level(logging.DEBUG)
+
+    downstream = await client.modem_primary_downstream()
+    assert downstream.channel_id > 0
+
+    all_downstreams = await client.modem_downstreams()
+    assert downstream in all_downstreams
+
+
 @requires_modem_password()
 @pytest.mark.asyncio
 async def test_system_info(

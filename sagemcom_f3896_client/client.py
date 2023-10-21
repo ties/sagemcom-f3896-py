@@ -187,6 +187,13 @@ class SagemcomModemSessionClient:
         async with self.__request("GET", "/rest/v1/system/info") as resp:
             return SystemInfoResult.build(await resp.json())
 
+    async def modem_primary_downstream(self) -> ModemQAMDownstreamChannelResult:
+        async with self.__request(
+            "GET", "/rest/v1/cablemodem/downstream/primary_"
+        ) as resp:
+            data = await resp.json()
+            return ModemQAMDownstreamChannelResult.build(data["channel"])
+
     async def system_state(self) -> ModemStateResult:
         async with self.__request("GET", "/rest/v1/cablemodem/state_") as resp:
             return ModemStateResult.build(await resp.json())

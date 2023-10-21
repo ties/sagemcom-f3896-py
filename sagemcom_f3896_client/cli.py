@@ -11,12 +11,17 @@ from sagemcom_f3896_client.util import build_client
 
 async def print_downstreams():
     async with build_client() as client:
+        primary = await client.modem_primary_downstream()
+
         for ch in await client.modem_downstreams():
             lock_status = "locked" if ch.lock_status else "unlocked"
             match ch.channel_type:
                 case "sc_qam":
                     click.echo(
-                        f"{ch.channel_type:<6} {ch.channel_id:>3} {ch.frequency:>8} {ch.power:>4} {ch.snr:>9} {ch.modulation:>8} {ch.rx_mer/1.0:>4} {lock_status:>8} {ch.corrected_errors:>10} {ch.uncorrected_errors:>3}"
+                        click.style(
+                            f"{ch.channel_type:<6} {ch.channel_id:>3} {ch.frequency:>8} {ch.power:>4} {ch.snr:>9} {ch.modulation:>8} {ch.rx_mer/1.0:>4} {lock_status:>8} {ch.corrected_errors:>10} {ch.uncorrected_errors:>3}",
+                            bold=ch.channel_id == primary.channel_id,
+                        )
                     )
                 case "ofdm":
                     click.echo(
