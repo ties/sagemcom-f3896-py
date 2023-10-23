@@ -383,17 +383,14 @@ class Exporter:
                     event_code=event_code,
                     profile=profile,
                 ):
-                    value = -1
-                    if event_code == 16:
-                        value = 1
-                    elif event_code == 24:
-                        value = 0
+                    if event_code in (16, 24):
+                        value = 1 if event_code == 16 else 0
 
-                    metric_ds_ofdm_profile_failure.labels(
-                        channel_id=channel_id,
-                        profile=profile,
-                        type="ofdm_profile_failure",
-                    ).set(value)
+                        metric_ds_ofdm_profile_failure.labels(
+                            channel_id=channel_id,
+                            profile=profile,
+                            type="ofdm_profile_failure",
+                        ).set(value)
                 case DownstreamProfileMessage():
                     self.profile_messages.add(message)
                 case UpstreamProfileMessage():
