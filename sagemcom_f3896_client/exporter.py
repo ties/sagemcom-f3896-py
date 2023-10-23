@@ -68,7 +68,8 @@ class Exporter:
         """Gather metrics and return a built response"""
         registry = CollectorRegistry()
         # create metrics
-        metric_modem_info = Info("modem_info", "Modem information", registry=registry)
+        # note: _info will be postfixed
+        metric_modem_info = Info("modem", "Modem information", registry=registry)
         metric_modem_uptime = Gauge("modem_uptime", "Uptime", registry=registry)
 
         # gather metrics in parallel
