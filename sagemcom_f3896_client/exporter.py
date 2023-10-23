@@ -408,15 +408,12 @@ class Exporter:
                     profile=profile,
                 ):
                     if not ds_channels or channel_id in ds_channels:
-                        metric_channel_profile.labels(
-                            direction="downstream", channel_id=channel_id, slot="1"
-                        ).set(profile[0])
-                        metric_channel_profile.labels(
-                            direction="downstream", channel_id=channel_id, slot="2"
-                        ).set(profile[1])
-                        metric_channel_profile.labels(
-                            direction="downstream", channel_id=channel_id, slot="3"
-                        ).set(profile[2])
+                        for idx, profile in enumerate(profile):
+                            metric_channel_profile.labels(
+                                direction="downstream",
+                                channel_id=channel_id,
+                                slot=str(idx + 1),
+                            ).set(profile)
                     else:
                         LOG.info(
                             "Ignoring profile message for no longer present downstream channel %d",
@@ -429,12 +426,12 @@ class Exporter:
                     profile=profile,
                 ):
                     if not us_channels or channel_id in us_channels:
-                        metric_channel_profile.labels(
-                            direction="upstream", channel_id=channel_id, slot="1"
-                        ).set(profile[0])
-                        metric_channel_profile.labels(
-                            direction="upstream", channel_id=channel_id, slot="2"
-                        ).set(profile[1])
+                        for idx, profile in enumerate(profile):
+                            metric_channel_profile.labels(
+                                direction="upstream",
+                                channel_id=channel_id,
+                                slot=str(idx + 1),
+                            ).set(profile)
                     else:
                         LOG.info(
                             "Ignoring profile message for no longer present upstream channel %d",
