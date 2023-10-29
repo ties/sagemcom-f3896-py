@@ -56,7 +56,7 @@ class ProfileMessages:
 
         return removed
 
-    def add(self, message: DownstreamProfileMessage | UpstreamProfileMessage) -> bool:
+    def add(self, message: DownstreamProfileMessage | UpstreamProfileMessage):
         """Add a messsage, removing a message of that type for that channel if present."""
         for existing in list(self._messages):
             if existing.channel_id == message.channel_id and isinstance(
@@ -72,6 +72,9 @@ class ProfileMessages:
 
     def __iter__(self):
         return iter(self._messages)
+
+    def __len__(self):
+        return len(self._messages)
 
 
 class Exporter:
