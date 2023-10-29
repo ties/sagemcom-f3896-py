@@ -53,8 +53,8 @@ def ds_message(
 ) -> DownstreamProfileMessage:
     return DownstreamProfileMessage(
         channel_id=channel_id,
-        previous_profile=frozenset(old_profile) if old_profile else None,
-        profile=frozenset(profile),
+        previous_profile=tuple(old_profile) if old_profile else None,
+        profile=tuple(profile),
     )
 
 
@@ -63,6 +63,6 @@ def us_message(
 ) -> UpstreamProfileMessage:
     return UpstreamProfileMessage(
         channel_id=channel_id,
-        previous_profile=frozenset(old_profile) if old_profile else None,
-        profile=frozenset(profile),
+        previous_profile=tuple(old_profile) if old_profile else None,
+        profile=tuple(profile),
     )

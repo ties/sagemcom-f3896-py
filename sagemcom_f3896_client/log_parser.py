@@ -1,20 +1,20 @@
 import re
 from dataclasses import dataclass
-from typing import FrozenSet, Optional
+from typing import Optional, Tuple
 
 
 @dataclass(eq=True, frozen=True)
 class DownstreamProfileMessage:
     channel_id: int
-    previous_profile: Optional[FrozenSet[int]]
-    profile: FrozenSet[int]
+    previous_profile: Optional[Tuple[int, ...]]
+    profile: Tuple[int, ...]
 
 
 @dataclass(eq=True, frozen=True)
 class UpstreamProfileMessage:
     channel_id: int
-    previous_profile: Optional[FrozenSet[int]]
-    profile: FrozenSet[int]
+    previous_profile: Optional[Tuple[int, ...]]
+    profile: Tuple[int, ...]
 
 
 @dataclass(eq=True, frozen=True)
@@ -72,24 +72,20 @@ def parse_message(message: str) -> Optional[ParsedMessage]:
     if match:
         return DownstreamProfileMessage(
             channel_id=int(match.group("channel_id")),
-            previous_profile=frozenset(
-                map(int, match.group("previous_profile").split())
-            )
+            previous_profile=tuple(map(int, match.group("previous_profile").split()))
             if match.group("previous_profile")
             else None,
-            profile=frozenset(map(int, match.group("profile").split())),
+            profile=tuple(map(int, match.group("profile").split())),
         )
 
     match = US_PROFILE_RE.match(message)
     if match:
         return UpstreamProfileMessage(
             channel_id=int(match.group("channel_id")),
-            previous_profile=frozenset(
-                map(int, match.group("previous_profile").split())
-            )
+            previous_profile=tuple(map(int, match.group("previous_profile").split()))
             if match.group("previous_profile")
             else None,
-            profile=frozenset(map(int, match.group("profile").split())),
+            profile=tuple(map(int, match.group("profile").split())),
         )
 
     match = REBOOT_RE.match(message)
