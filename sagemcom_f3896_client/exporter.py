@@ -28,6 +28,52 @@ MODEM_METRICS_DURATION = Summary(
 )
 
 
+class ProfileMessages:
+    """Keep track of profile messages for channels that are still present"""
+
+    _messages: Set[DownstreamProfileMessage | UpstreamProfileMessage]
+
+    def __init__(self):
+        self._messages = set()
+
+    def update_for_channels(
+        self,
+        ds_channels: List[ModemDownstreamChannelResult],
+        us_channels: List[ModemUpstreamChannelResult],
+    ) -> int:
+        all_channels = frozenset(c.channel_id for c in ds_channels) | frozenset(
+            c.channel_id for c in us_channels
+        )
+        removed = 0
+        for message in list(self._messages):
+            if message.channel_id not in all_channels:
+                LOG.info(
+                    "Dropping profile message for no longer present downstream channel %d",
+                    message.channel_id,
+                )
+                self._messages.remove(message)
+                removed += 1
+
+        return removed
+
+    def add(self, message: DownstreamProfileMessage | UpstreamProfileMessage) -> bool:
+        """Add a messsage, removing a message of that type for that channel if present."""
+        for existing in list(self._messages):
+            if existing.channel_id == message.channel_id and isinstance(
+                message, type(existing)
+            ):
+                self._messages.remove(existing)
+
+        return self._messages.add(message)
+
+    def remove(self, message: DownstreamProfileMessage | UpstreamProfileMessage):
+        """Remove a message."""
+        self._messages.remove(message)
+
+    def __iter__(self):
+        return iter(self._messages)
+
+
 class Exporter:
     """Prometheus export for F3896"""
 
@@ -38,12 +84,14 @@ class Exporter:
     modem_downstreams: List[ModemDownstreamChannelResult] = []
     modem_upstreams: List[ModemUpstreamChannelResult] = []
 
-    profile_messages: Set[DownstreamProfileMessage] = set()
+    profile_messages: ProfileMessages
 
     def __init__(self, client: SagemcomModemSessionClient, port: int):
         self.client = client
         self.app = web.Application()
         self.port = port
+
+        self.profile_messages = ProfileMessages()
 
         self.app.add_routes(
             [
@@ -53,6 +101,7 @@ class Exporter:
         )
 
     async def run(self) -> None:
+        """Start the exporter."""
         LOG.info("Starting exporter on port %d", self.port)
         runner = web.AppRunner(self.app)
         await runner.setup()
@@ -64,7 +113,7 @@ class Exporter:
             await asyncio.sleep(3600)
 
     @aio.time(MODEM_METRICS_DURATION)
-    async def metrics(self, req: web.Request) -> web.Response:
+    async def metrics(self, _: web.Request) -> web.Response:
         """Gather metrics and return a built response"""
         registry = CollectorRegistry()
         # create metrics
@@ -106,7 +155,7 @@ class Exporter:
         metric_modem_uptime.set(state.up_time)
 
         # from aiohttp support in prometheus-async
-        generate, content_type = aio.web._choose_generator("*/*")
+        generate, _ = aio.web._choose_generator("*/*")
         # Join the two registries
         # FIXME: Less hacky way of ensuring the content is OK
         return web.Response(
@@ -397,8 +446,9 @@ class Exporter:
                 case UpstreamProfileMessage():
                     self.profile_messages.add(message)
 
-        ds_channels = frozenset(c.channel_id for c in self.modem_downstreams)
-        us_channels = frozenset(c.channel_id for c in self.modem_upstreams)
+        self.profile_messages.update_for_channels(
+            self.modem_downstreams, self.modem_upstreams
+        )
 
         for message in self.profile_messages:
             match message:
@@ -407,37 +457,23 @@ class Exporter:
                     previous_profile=_,
                     profile=profile,
                 ):
-                    if not ds_channels or channel_id in ds_channels:
-                        for idx, profile in enumerate(profile):
-                            metric_channel_profile.labels(
-                                direction="downstream",
-                                channel_id=channel_id,
-                                slot=str(idx + 1),
-                            ).set(profile)
-                    else:
-                        LOG.info(
-                            "Ignoring profile message for no longer present downstream channel %d",
-                            message.channel_id,
-                        )
-                        self.profile_messages.remove(message)
+                    for idx, profile in enumerate(profile):
+                        metric_channel_profile.labels(
+                            direction="downstream",
+                            channel_id=channel_id,
+                            slot=str(idx + 1),
+                        ).set(profile)
                 case UpstreamProfileMessage(
                     channel_id=channel_id,
                     previous_profile=_,
                     profile=profile,
                 ):
-                    if not us_channels or channel_id in us_channels:
-                        for idx, profile in enumerate(profile):
-                            metric_channel_profile.labels(
-                                direction="upstream",
-                                channel_id=channel_id,
-                                slot=str(idx + 1),
-                            ).set(profile)
-                    else:
-                        LOG.info(
-                            "Ignoring profile message for no longer present upstream channel %d",
-                            message.channel_id,
-                        )
-                        self.profile_messages.remove(message)
+                    for idx, profile in enumerate(profile):
+                        metric_channel_profile.labels(
+                            direction="upstream",
+                            channel_id=channel_id,
+                            slot=str(idx + 1),
+                        ).set(profile)
 
     async def index(self, _: web.Request) -> str:
         """Serve an index page."""
