@@ -10,6 +10,26 @@ Main goal of @ties is to have metrics from the modem, but the general structure 
 | -------------------------- | ---------- | --------------------------------- |
 | Connectbox Giga (F3896-LG) | Ziggo (NL) | Primary development on this modem |
 
+## Running
+
+For example, using docker compose:
+```yaml
+version: '3.7'
+
+services:
+  sagemcom_exporter:
+    image: ghcr.io/ties/sagemcom-f3896-py:latest
+    deploy:
+      resources:
+        limits:
+          cpus: 0.1
+          memory: 128M
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      MODEM_PASSWORD: PASSWORD123
+```
 
 ## Changelog
 
