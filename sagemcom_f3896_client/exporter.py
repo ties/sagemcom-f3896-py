@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from typing import List, Set
+from typing import List
 
 import aiohttp
 import click
@@ -13,6 +13,7 @@ from sagemcom_f3896_client.client import SagemcomModemClient, SagemcomModemSessi
 from sagemcom_f3896_client.log_parser import (
     CMStatusMessageOFDM,
     DownstreamProfileMessage,
+    ParsedMessage,
     RebootMessage,
     UpstreamProfileMessage,
 )
@@ -20,6 +21,7 @@ from sagemcom_f3896_client.models import (
     ModemDownstreamChannelResult,
     ModemUpstreamChannelResult,
 )
+from sagemcom_f3896_client.profile_messages import ProfileMessageStore
 
 LOG = logging.getLogger(__name__)
 
@@ -28,53 +30,15 @@ MODEM_METRICS_DURATION = Summary(
 )
 
 
-class ProfileMessages:
-    """Keep track of profile messages for channels that are still present"""
+def format_log_entries(logs: List[ParsedMessage]):
+    for entry in logs:
+        yield f"{' ' * 8}<tr><td>{entry.time.ctime()}</td><td>"
+        if entry.priority == "error":
+            yield f"<emph>{entry.priority}</emph>"
+        else:
+            yield entry.priority
 
-    _messages: Set[DownstreamProfileMessage | UpstreamProfileMessage]
-
-    def __init__(self):
-        self._messages = set()
-
-    def update_for_channels(
-        self,
-        ds_channels: List[ModemDownstreamChannelResult],
-        us_channels: List[ModemUpstreamChannelResult],
-    ) -> int:
-        all_channels = frozenset(c.channel_id for c in ds_channels) | frozenset(
-            c.channel_id for c in us_channels
-        )
-        removed = 0
-        for message in list(self._messages):
-            if message.channel_id not in all_channels:
-                LOG.info(
-                    "Dropping profile message for no longer present downstream channel %d",
-                    message.channel_id,
-                )
-                self._messages.remove(message)
-                removed += 1
-
-        return removed
-
-    def add(self, message: DownstreamProfileMessage | UpstreamProfileMessage):
-        """Add a messsage, removing a message of that type for that channel if present."""
-        for existing in list(self._messages):
-            if existing.channel_id == message.channel_id and isinstance(
-                message, type(existing)
-            ):
-                self._messages.remove(existing)
-
-        return self._messages.add(message)
-
-    def remove(self, message: DownstreamProfileMessage | UpstreamProfileMessage):
-        """Remove a message."""
-        self._messages.remove(message)
-
-    def __iter__(self):
-        return iter(self._messages)
-
-    def __len__(self):
-        return len(self._messages)
+        yield f"</td><td>{entry.message}</td></tr>"
 
 
 class Exporter:
@@ -87,14 +51,14 @@ class Exporter:
     modem_downstreams: List[ModemDownstreamChannelResult] = []
     modem_upstreams: List[ModemUpstreamChannelResult] = []
 
-    profile_messages: ProfileMessages
+    profile_messages: ProfileMessageStore
 
     def __init__(self, client: SagemcomModemSessionClient, port: int):
         self.client = client
         self.app = web.Application()
         self.port = port
 
-        self.profile_messages = ProfileMessages()
+        self.profile_messages = ProfileMessageStore()
 
         self.app.add_routes(
             [
@@ -516,12 +480,7 @@ class Exporter:
                     <tr><td>Time</td><td>Priority</td><td>Message</td></tr>
                     </thread>
                     <tbody>
-                    {''.join(
-                        [
-                            f"<tr><td>{entry.time.ctime()}</td><td>{'<emph>' if entry.priority == 'error' else ''}{entry.priority}</td><td>{entry.message}</td></tr>"
-                            for entry in logs
-                        ]
-                    )}
+                    {''.join(list(format_log_entries(logs)))}
                     </tbody>
                 </table>
                 </p>
