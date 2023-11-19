@@ -7,7 +7,7 @@ import aiohttp
 import click
 from aiohttp import web
 from prometheus_async import aio
-from prometheus_client import REGISTRY, CollectorRegistry, Gauge, Info, Summary
+from prometheus_client import REGISTRY, CollectorRegistry, Counter, Gauge, Info, Summary
 
 from sagemcom_f3896_client.client import SagemcomModemClient, SagemcomModemSessionClient
 from sagemcom_f3896_client.log_parser import (
@@ -27,6 +27,9 @@ LOG = logging.getLogger(__name__)
 
 MODEM_METRICS_DURATION = Summary(
     "modem_metrics_processing_seconds", "Time spent processing modem metrics"
+)
+MODEM_UPDATE_COUNT = Counter(
+    "modem_update", "Number of updates from the modem", ["status"]
 )
 
 
@@ -97,29 +100,31 @@ class Exporter:
                 self.__update_upstream_channel_metrics(registry),
                 self.__log_based_metrics(registry),
             )
+
+            metric_modem_info.info(
+                {
+                    "mac": state.mac_address,
+                    "serial": state.serial_number,
+                    "software_version": system_info.software_version,
+                    "hardware_version": system_info.hardware_version,
+                    "boot_file_name": state.boot_file_name,
+                }
+            )
+            metric_modem_uptime.set(state.up_time)
+            MODEM_UPDATE_COUNT.labels(status="success").inc()
         except (
             aiohttp.ClientResponseError,
             aiohttp.client_exceptions.ClientConnectorError,
             asyncio.TimeoutError,
         ) as e:
             LOG.exception("Failed to gather metrics")
+            MODEM_UPDATE_COUNT.labels(status="failed").inc()
             raise web.HTTPServiceUnavailable(
                 body=f"Failed to gather metrics: {e}", headers={"Retry-After": "60"}
             )
         finally:
             # async logout so we do not block the web interface
             asyncio.create_task(self.client._logout())
-
-        metric_modem_info.info(
-            {
-                "mac": state.mac_address,
-                "serial": state.serial_number,
-                "software_version": system_info.software_version,
-                "hardware_version": system_info.hardware_version,
-                "boot_file_name": state.boot_file_name,
-            }
-        )
-        metric_modem_uptime.set(state.up_time)
 
         # from aiohttp support in prometheus-async
         generate, _ = aio.web._choose_generator("*/*")
