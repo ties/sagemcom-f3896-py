@@ -8,6 +8,7 @@ exclude nodemon.json
 
 global-exclude .gitkeep .gitignore .DS_Store
 
+prune docs
 prune tests
 prunt .github
 prunt .vscode
