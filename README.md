@@ -7,6 +7,10 @@ Main goal of @ties is to have metrics from the modem, but the general structure 
 It contains a prometheus exporter with metrics from the modem. By default
 this is at `127.0.0.1:8080/metrics`.
 
+After this data is collected by prometheus it can be used to alert based on metrics, or to visualise it. For example using the pre-made dasboard [20072](https://grafana.com/grafana/dashboards/20072-samemcom-docsis/).
+![Grafana dashboard screenshot](docs/grafana_screenshot.png)
+
+
 ## Compatibility
 
 | Router model | Provider(s) | Comments |
