@@ -27,7 +27,7 @@ async def print_downstreams():
                 case "sc_qam":
                     click.echo(
                         click.style(
-                            f"{ch.channel_type:<6} {ch.channel_id:>3} {ch.frequency:>8} {ch.power:>4} {ch.snr:>9} {ch.modulation:>8} {ch.rx_mer/1.0:>4} {lock_status:>8} {ch.corrected_errors:>10} {ch.uncorrected_errors:>3}",
+                            f"{ch.channel_type:<6} {ch.channel_id:>3} {ch.frequency:>8} {ch.power:>4} {ch.snr:>9} {ch.modulation:>8} {ch.rx_mer / 1.0:>4} {lock_status:>8} {ch.corrected_errors:>10} {ch.uncorrected_errors:>3}",
                             bold=ch.channel_id == primary.channel_id,
                         )
                     )
@@ -122,12 +122,34 @@ async def print_status():
         click.echo("| ---------------- | ---------------------------- |")
 
 
+async def print_service_flows():
+    async with build_client() as client:
+        service_flows = await client.modem_service_flows()
+        click.echo(
+            "| ------ | ---------- | ---------------- | ------ | ---- | ------- | ------------- |"
+        )
+        click.echo(
+            f"| {'ID':>6} | {'direction':>10} | {'max rate':>16} | {'burst':>6} | {'res':>4} | {'concat':>7} | {'schedule type':>13} |"
+        )
+        click.echo(
+            "| ------ | ---------- | ---------------- | ------ | ---- | ------- | ------------- |"
+        )
+        # id=216806, direction='downstream', max_traffic_rate=1070000000, max_traffic_burst=96000, min_reserved_rate=0, max_concatenated_burst=0, schedule_type='undefined')
+        for sf in service_flows:
+            click.echo(
+                f"| {sf.id:>6} | {sf.direction:>10} | {sf.max_traffic_rate:>16} | {sf.max_traffic_burst:>6} | {sf.min_reserved_rate:>4} | {sf.max_concatenated_burst:>7} | {sf.schedule_type:>13} |"
+            )
+        click.echo(
+            "| ------ | ---------- | ---------------- | ------ | ---- | ------- | ------------- |"
+        )
+
+
 async def do_reboot():
     t0 = time.time()
     click.echo("Rebooting modem...", color="red")
     async with build_client(timeout=30) as client:
         await client.system_reboot()
-    click.echo(f"Modem rebooted in {time.time()-t0:.2f}s", color="green")
+    click.echo(f"Modem rebooted in {time.time() - t0:.2f}s", color="green")
     async with build_client(timeout=1) as client:
         had_failure = False
 
@@ -149,7 +171,7 @@ async def do_reboot():
             await asyncio.sleep(1)
         # ensure there is a newline.
         click.echo()
-        click.echo(f"Modem is back online after {time.time()-t0:.2f}s", color="green")
+        click.echo(f"Modem is back online after {time.time() - t0:.2f}s", color="green")
 
 
 @click.option("-v", "--verbose", count=True)
@@ -195,6 +217,11 @@ def upstreams():
 @cli.command()
 def status():
     asyncio.run(print_status())
+
+
+@cli.command()
+def service_flows():
+    asyncio.run(print_service_flows())
 
 
 @cli.command()
