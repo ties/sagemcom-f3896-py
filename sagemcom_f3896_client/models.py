@@ -36,8 +36,14 @@ class UserTokenResult:
         )
 
 
-@dataclass
+@dataclass(order=True, frozen=True)
 class EventLogItem:
+    """Event log elements.
+
+    Sorted by time, priority, message (field order).
+    Is hashable because it's frozen.
+    """
+
     time: datetime.datetime
     priority: Literal["error", "notice", "critical", "warning"]
     message: str

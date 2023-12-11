@@ -1,5 +1,6 @@
 exclude MANIFEST.in
 exclude poetry.lock
+exclude CHANGELOG.md
 exclude .pre-commit-config.yaml
 exclude .flake8
 exclude .dockerignore
