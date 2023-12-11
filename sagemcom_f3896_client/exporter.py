@@ -380,7 +380,7 @@ class Exporter:
         # print the new log message
         current_messages = set(log_lines)
         new_messages = current_messages - self.previous_logs
-        for msg in sorted(new_messages, reverse=True):
+        for msg in sorted(new_messages):
             MODEM_LOG.info(
                 "%s [%s]: %s", msg.time.isoformat(), msg.priority, msg.message
             )
