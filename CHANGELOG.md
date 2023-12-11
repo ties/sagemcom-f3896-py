@@ -3,3 +3,4 @@
   * Add a stable sort for event log items and use it in the web
     index page.
   * Build with Python 3.12
+  * Update pre-commit settings
