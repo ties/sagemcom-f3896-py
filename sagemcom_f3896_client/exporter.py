@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from typing import List
+from typing import List, Set
 
 import aiohttp
 import click
@@ -18,12 +18,14 @@ from sagemcom_f3896_client.log_parser import (
     UpstreamProfileMessage,
 )
 from sagemcom_f3896_client.models import (
+    EventLogItem,
     ModemDownstreamChannelResult,
     ModemUpstreamChannelResult,
 )
 from sagemcom_f3896_client.profile_messages import ProfileMessageStore
 
 LOG = logging.getLogger(__name__)
+MODEM_LOG = logging.getLogger("modem.eventlog")
 
 MODEM_METRICS_DURATION = Summary(
     "modem_metrics_processing_seconds", "Time spent processing modem metrics"
@@ -44,6 +46,7 @@ class Exporter:
     modem_upstreams: List[ModemUpstreamChannelResult] = []
 
     profile_messages: ProfileMessageStore
+    previous_logs: Set[EventLogItem] = set()
 
     def __init__(self, client: SagemcomModemSessionClient, port: int):
         self.client = client
@@ -373,6 +376,16 @@ class Exporter:
         log_lines = await self.client.modem_event_log()
         for line in log_lines:
             metric_log_by_priority.labels(priority=line.priority).inc()
+
+        # print the new log message
+        current_messages = set(log_lines)
+        new_messages = current_messages - self.previous_logs
+        for msg in sorted(new_messages, reverse=True):
+            MODEM_LOG.info(
+                "%s [%s]: %s", msg.time.isoformat(), msg.priority, msg.message
+            )
+        self.previous_logs = current_messages
+
         # parse the log lines
         log_messages = [line.parse() for line in reversed(log_lines)]
 
