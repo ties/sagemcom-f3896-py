@@ -56,6 +56,10 @@ CM_STATUS_OFDM_RE = re.compile(
 REBOOT_RE = re.compile(r"^Cable Modem Reboot because of - (?P<message>.*)$")
 
 
+def is_login_message(item) -> bool:
+    return "GUI Login Status - Login Success from LAN interface" in item.message
+
+
 def parse_message(message: str) -> Optional[ParsedMessage]:
     """Parse a message in the modem log"""
     match = CM_STATUS_OFDM_RE.match(message)
