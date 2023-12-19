@@ -1,3 +1,7 @@
+## 2023-12-19 (v0.2.1)
+
+  * Filter the "login success" messages by default.
+
 ## 2023-12-11 (v0.2.0)
 
   * Add a stable sort for event log items and use it in the web
