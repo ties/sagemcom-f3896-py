@@ -16,6 +16,7 @@ from sagemcom_f3896_client.log_parser import (
     DownstreamProfileMessage,
     RebootMessage,
     UpstreamProfileMessage,
+    is_login_message,
 )
 from sagemcom_f3896_client.models import (
     EventLogItem,
@@ -42,13 +43,20 @@ class Exporter:
     app: web.Application
     port: int
 
+    include_login_messages: bool = False
+
     modem_downstreams: List[ModemDownstreamChannelResult] = []
     modem_upstreams: List[ModemUpstreamChannelResult] = []
 
     profile_messages: ProfileMessageStore
     previous_logs: Set[EventLogItem] = set()
 
-    def __init__(self, client: SagemcomModemSessionClient, port: int):
+    def __init__(
+        self,
+        client: SagemcomModemSessionClient,
+        port: int,
+        include_login_messages: bool = False,
+    ):
         self.client = client
         self.app = web.Application()
         self.port = port
@@ -374,6 +382,11 @@ class Exporter:
         )
 
         log_lines = await self.client.modem_event_log()
+        log_lines = [
+            line
+            for line in log_lines
+            if self.include_login_messages or not is_login_message(line)
+        ]
         for line in log_lines:
             metric_log_by_priority.labels(priority=line.priority).inc()
 
@@ -451,7 +464,11 @@ class Exporter:
 
     async def index(self, _: web.Request) -> str:
         """Serve an index page."""
-        logs = await self.client.modem_event_log()
+        logs = [
+            line
+            for line in await self.client.modem_event_log()
+            if self.include_login_messages or not is_login_message(line)
+        ]
 
         return web.Response(
             text=templates.index_template(logs),
@@ -467,24 +484,37 @@ class Exporter:
     default=os.environ.get("MODEM_URL", "http://192.168.100.1"),
     help="URL to modem - default from MODEM_URL",
 )
+@click.option("--include-login-messages", is_flag=True, default=False)
 @click.option("-p", "--port", default=8080, help="Port to listen on")
 @click.option(
     "--password",
     default=os.environ.get("MODEM_PASSWORD", ""),
     help="Password - default from MODEM_PASSWORD",
 )
-def main(verbose, port: int, password: str, base_url: str):
-    asyncio.run(async_main(verbose, port, password, base_url))
+def main(
+    verbose, port: int, password: str, base_url: str, include_login_messages: bool
+):
+    asyncio.run(
+        async_main(
+            verbose,
+            port,
+            password,
+            base_url,
+            include_login_messages=include_login_messages,
+        )
+    )
 
 
-async def async_main(verbose, port: int, password: str, base_url: str):
+async def async_main(
+    verbose, port: int, password: str, base_url: str, include_login_messages: bool
+):
     if verbose > 0:
         import logging
 
         logging.basicConfig(level=logging.DEBUG)
 
     async with SagemcomModemClient(base_url, password) as client:
-        exporter = Exporter(client, port)
+        exporter = Exporter(client, port, include_login_messages=include_login_messages)
         await exporter.run()
 
 
