@@ -9,6 +9,9 @@ from sagemcom_f3896_client.log_parser import (
 )
 
 LOG_MESSAGES = [
+    "Cable Modem Reboot because of - Software_Upgrade",
+    "SW download Successful - Via NMS",
+    "SW Download INIT - Via NMS",
     "CM-STATUS message sent. Event Type Code: 8; Chan ID: 27; DSID: N/A; MAC Addr: N/A; OFDM/OFDMA Profile ID: N/A.;CM-MAC=44:05:a5:a5:a5:4a;CMTS-MAC=00:01:5c:de:ad:be;CM-QOS=1.1;CM-VER=3.1;",
     "Unicast Maintenance Ranging attempted - No response - Retries exhausted;CM-MAC=44:05:a5:a5:a5:4a;CMTS-MAC=00:01:5c:de:ad:be;CM-QOS=1.1;CM-VER=3.1;",
     "16 consecutive T3 timeouts while trying to range on upstream channel 8;CM-MAC=44:05:a5:a5:a5:4a;CMTS-MAC=00:01:5c:de:ad:be;CM-QOS=1.1;CM-VER=3.1;",

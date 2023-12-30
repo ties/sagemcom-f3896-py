@@ -185,7 +185,7 @@ def cli(verbose):
 
 @click.option("--dump-json/--no-dump-json", default=False)
 @click.option("--dump-bbcode/--no-dump-bbcode", default=False)
-@click.option("--limit", default=10)
+@click.option("--limit", default=999)
 @click.option("--remove-mac/--print-mac", default=True)
 @cli.command()
 def logs(

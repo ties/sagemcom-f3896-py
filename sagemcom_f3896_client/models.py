@@ -45,7 +45,7 @@ class EventLogItem:
     """
 
     time: datetime.datetime
-    priority: Literal["error", "notice", "critical", "warning"]
+    priority: Literal["alert", "error", "notice", "critical", "warning"]
     message: str
 
     @staticmethod
