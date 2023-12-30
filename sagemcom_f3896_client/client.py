@@ -111,11 +111,26 @@ class SagemcomModemSessionClient:
     async def _logout(self) -> None:
         async with self.__login_semaphore:
             if self.authorization:
-                LOG.debug("Logging out session userId=%d", self.authorization.user_id)
-                await self.delete_token(
-                    self.authorization.user_id, self.authorization.token
-                )
-                self.authorization = None
+                # Try to log out. However, the session may not always exist.
+                # for example, the modem could have been rebooted while a session was active.
+                try:
+                    LOG.debug(
+                        "Logging out session userId=%d", self.authorization.user_id
+                    )
+                    await self.delete_token(
+                        self.authorization.user_id, self.authorization.token
+                    )
+                except (
+                    aiohttp.ClientResponseError,
+                    aiohttp.client_exceptions.ClientConnectorError,
+                    asyncio.TimeoutError,
+                ):
+                    LOG.info(
+                        "Failure during logout request, still deleting session token.",
+                        exc_info=True,
+                    )
+                finally:
+                    self.authorization = None
 
     @asynccontextmanager
     async def __request(
