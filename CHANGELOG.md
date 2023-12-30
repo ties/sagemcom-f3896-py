@@ -1,3 +1,10 @@
+## 2023-12-30 (v0.3.0):
+
+  * Fixed a bug where the metrics endpoint would break if the modem forgot
+    about the session (for example: reboot while a session was active).
+  * Updated pre-commit hooks
+  * cli `logs` command prints all log entries (except for logins), not first 10.
+
 ## 2023-12-19 (v0.2.1)
 
   * Filter the "login success" messages by default.

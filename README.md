@@ -80,12 +80,6 @@ services:
       MODEM_PASSWORD: PASSWORD123
 ```
 
-## Changelog
-
-  * 18-10-2023:
-    * Keep the profile messages if they expire and channel is still present on
-      modem.
-
 ## Endpoints
 
 The client implements some endpoints. Others are:
