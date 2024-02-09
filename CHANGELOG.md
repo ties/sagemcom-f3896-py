@@ -2,6 +2,7 @@
 
   * Container based on python 3.12
   * Parse more sample log messages
+  * Updated dependencies
 
 ## 2023-12-30 (v0.3.0):
 
