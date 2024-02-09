@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sagemcom-f3896-client"
-version = "0.3.0"
+version = "0.3.1"
 description = ""
 authors = ["Ties de Kock <ties@tiesdekock.nl>"]
 readme = "README.md"

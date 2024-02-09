@@ -1,3 +1,8 @@
+## 2024-02-09 (v0.3.1)
+
+  * Container based on python 3.12
+  * Parse more sample log messages
+
 ## 2023-12-30 (v0.3.0):
 
   * Fixed a bug where the metrics endpoint would break if the modem forgot
