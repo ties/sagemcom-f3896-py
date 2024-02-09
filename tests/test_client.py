@@ -44,7 +44,7 @@ async def test_event_log(client: SagemcomModemSessionClient, caplog: LogCaptureF
     log_elements = await client.modem_event_log()
 
     cnt = collections.Counter([elem.priority for elem in log_elements])
-    assert cnt["alert"], cnt["notice"] + cnt["error"] + cnt["warning"] + cnt[
+    assert cnt["alert"] + cnt["notice"] + cnt["error"] + cnt["warning"] + cnt[
         "critical"
     ] == len(log_elements)
 

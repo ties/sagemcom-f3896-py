@@ -9,6 +9,16 @@ from sagemcom_f3896_client.log_parser import (
 )
 
 LOG_MESSAGES = [
+    "CM-STATUS message sent. Event Type Code: 4; Chan ID: 14 15; DSID: N/A; MAC Addr: N/A; OFDM/OFDMA Profile ID: N/A.;CM-MAC=44:05:3f:92:a2:4a;CMTS-MAC=00:01:5c:aa:8a:4b;CM-QOS=1.1;CM-VER=3.1;",
+    "CM-STATUS message sent. Event Type Code: 5; Chan ID: 14 15; DSID: N/A; MAC Addr: N/A; OFDM/OFDMA Profile ID: N/A.;CM-MAC=44:05:3f:92:a2:4a;CMTS-MAC=00:01:5c:aa:8a:4b;CM-QOS=1.1;CM-VER=3.1;",
+    "CM-STATUS message sent. Event Type Code: 1; Chan ID: 14 15; DSID: N/A; MAC Addr: N/A; OFDM/OFDMA Profile ID: N/A.;CM-MAC=44:05:3f:92:a2:4a;CMTS-MAC=00:01:5c:aa:8a:4b;CM-QOS=1.1;CM-VER=3.1;",
+    "MDD message timeout;CM-MAC=44:05:3f:92:a2:4a;CMTS-MAC=00:01:5c:aa:8a:4b;CM-QOS=1.1;CM-VER=3.1;",
+    "CM-STATUS message sent. Event Type Code: 2; Chan ID: 14 15; DSID: N/A; MAC Addr: N/A; OFDM/OFDMA Profile ID: N/A.;CM-MAC=44:05:3f:92:a2:4a;CMTS-MAC=00:01:5c:aa:8a:4b;CM-QOS=1.1;CM-VER=3.1;",
+    "CM-STATUS message sent. Event Type Code: 8; Chan ID: 13 14 15 16; DSID: N/A; MAC Addr: N/A; OFDM/OFDMA Profile ID: N/A.;CM-MAC=44:05:3f:92:a2:4a;CMTS-MAC=00:01:5c:aa:8a:4b;CM-QOS=1.1;CM-VER=3.1;",
+    "No Ranging Response received - T3 time-out;CM-MAC=44:05:3f:92:a2:4a;CMTS-MAC=00:01:5c:aa:8a:4b;CM-QOS=1.1;CM-VER=3.1;",
+    "16 consecutive T3 timeouts while trying to range on upstream channel 0;CM-MAC=44:05:3f:92:a2:4a;CMTS-MAC=00:01:5c:aa:8a:4b;CM-QOS=1.1;CM-VER=3.1;",
+    "Unicast Maintenance Ranging attempted - No response - Retries exhausted;CM-MAC=44:05:3f:92:a2:4a;CMTS-MAC=00:01:5c:aa:8a:4b;CM-QOS=1.1;CM-VER=3.1;",
+    "Started Unicast Maintenance Ranging - No Response received - T3 time-out;CM-MAC=44:05:3f:92:a2:4a;CMTS-MAC=00:01:5c:aa:8a:4b;CM-QOS=1.1;CM-VER=3.1;",
     "Cable Modem Reboot because of - Software_Upgrade",
     "SW download Successful - Via NMS",
     "SW Download INIT - Via NMS",
