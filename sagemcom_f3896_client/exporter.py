@@ -34,6 +34,11 @@ MODEM_METRICS_DURATION = Summary(
 MODEM_UPDATE_COUNT = Counter(
     "modem_update", "Number of updates from the modem", ["status"]
 )
+RUNNING_TASKS = Gauge("running_tasks", "Number of running tasks")
+
+
+class MetricUpdateFailedError(Exception):
+    pass
 
 
 class Exporter:
@@ -51,6 +56,10 @@ class Exporter:
     profile_messages: ProfileMessageStore
     previous_logs: Set[EventLogItem] = set()
 
+    registry: CollectorRegistry = CollectorRegistry()
+
+    background_tasks: Set[asyncio.Task] = set()
+
     def __init__(
         self,
         client: SagemcomModemSessionClient,
@@ -60,6 +69,7 @@ class Exporter:
         self.client = client
         self.app = web.Application()
         self.port = port
+        self.include_login_messages = include_login_messages
 
         self.profile_messages = ProfileMessageStore()
 
@@ -85,6 +95,30 @@ class Exporter:
     @aio.time(MODEM_METRICS_DURATION)
     async def metrics(self, _: web.Request) -> web.Response:
         """Gather metrics and return a built response"""
+        try:
+            # update metrics with a timeout of 10 seconds
+            task = asyncio.create_task(self.update_metrics())
+            task.add_done_callback(self.background_tasks.discard)
+            async with asyncio.timeout(10):
+                await task
+        except TimeoutError:
+            LOG.info("Timeout when updating metrics - using old values")
+        except MetricUpdateFailedError:
+            pass
+
+        RUNNING_TASKS.set(len(self.background_tasks))
+
+        # from aiohttp support in prometheus-async
+        generate, _ = aio.web._choose_generator("*/*")
+        # Join the two registries
+        # FIXME: Less hacky way of ensuring the content is OK
+        return web.Response(
+            body=generate(self.registry).decode("utf-8").strip()
+            + "\n"
+            + generate(REGISTRY).decode("utf-8")
+        )
+
+    async def update_metrics(self) -> CollectorRegistry:
         registry = CollectorRegistry()
         # create metrics
         # note: _info will be postfixed
@@ -112,6 +146,8 @@ class Exporter:
             )
             metric_modem_uptime.set(state.up_time)
             MODEM_UPDATE_COUNT.labels(status="success").inc()
+
+            self.registry = registry
         except (
             aiohttp.ClientResponseError,
             aiohttp.client_exceptions.ClientConnectorError,
@@ -119,22 +155,13 @@ class Exporter:
         ) as e:
             LOG.exception("Failed to gather metrics")
             MODEM_UPDATE_COUNT.labels(status="failed").inc()
-            raise web.HTTPServiceUnavailable(
-                body=f"Failed to gather metrics: {e}", headers={"Retry-After": "60"}
-            )
+            raise MetricUpdateFailedError() from e
         finally:
             # async logout so we do not block the web interface
-            asyncio.create_task(self.client._logout())
-
-        # from aiohttp support in prometheus-async
-        generate, _ = aio.web._choose_generator("*/*")
-        # Join the two registries
-        # FIXME: Less hacky way of ensuring the content is OK
-        return web.Response(
-            body=generate(registry).decode("utf-8").strip()
-            + "\n"
-            + generate(REGISTRY).decode("utf-8")
-        )
+            # keep strong reference to task.
+            task = asyncio.create_task(self.client._logout())
+            task.add_done_callback(self.background_tasks.discard)
+            self.background_tasks.add(task)
 
     async def __update_upstream_channel_metrics(self, registry: CollectorRegistry):
         metric_upstream_frequency = Gauge(
