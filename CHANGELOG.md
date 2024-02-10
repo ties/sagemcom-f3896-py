@@ -1,3 +1,10 @@
+## 2024-02-xx (v0.4.0)
+
+  * 10 second timeout for fetching data
+  * Keep previous metrics when a fetch fails (or times out).
+  * Metrics duration now tracks fetching time, not web request delay.
+  * Uses locking to prevent concurrent update requests
+
 ## 2024-02-09 (v0.3.1)
 
   * Container based on python 3.12

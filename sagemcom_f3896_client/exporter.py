@@ -32,8 +32,17 @@ MODEM_METRICS_DURATION = Summary(
     "modem_metrics_processing_seconds", "Time spent processing modem metrics"
 )
 MODEM_UPDATE_COUNT = Counter(
-    "modem_update", "Number of updates from the modem", ["status"]
+    "modem_update",
+    "Number of updates from the modem. A request where the exporter did not wait for results (timeout) can still result in success or failure.",
+    ["status"],
 )
+MODEM_LAST_UPDATE = Gauge(
+    "modem_last_update", "Timestamp of the last update from the modem.", ["status"]
+)
+
+
+class MetricUpdateFailedError(Exception):
+    pass
 
 
 class Exporter:
@@ -51,6 +60,14 @@ class Exporter:
     profile_messages: ProfileMessageStore
     previous_logs: Set[EventLogItem] = set()
 
+    """The registry of metrics from the last fetch."""
+    registry: CollectorRegistry = CollectorRegistry()
+
+    """A collection of storng references to tasks that run in the background that we do not want to be cancelled."""
+    background_tasks: Set[asyncio.Task] = set()
+
+    __metrics_updating_lock: asyncio.Lock = asyncio.Lock()
+
     def __init__(
         self,
         client: SagemcomModemSessionClient,
@@ -60,6 +77,7 @@ class Exporter:
         self.client = client
         self.app = web.Application()
         self.port = port
+        self.include_login_messages = include_login_messages
 
         self.profile_messages = ProfileMessageStore()
 
@@ -82,59 +100,84 @@ class Exporter:
         while True:
             await asyncio.sleep(3600)
 
-    @aio.time(MODEM_METRICS_DURATION)
     async def metrics(self, _: web.Request) -> web.Response:
         """Gather metrics and return a built response"""
-        registry = CollectorRegistry()
-        # create metrics
-        # note: _info will be postfixed
-        metric_modem_info = Info("modem", "Modem information", registry=registry)
-        metric_modem_uptime = Gauge("modem_uptime", "Uptime", registry=registry)
-
-        # gather metrics in parallel
         try:
-            state, system_info, _, _, _ = await asyncio.gather(
-                self.client.system_state(),
-                self.client.system_info(),
-                self.__update_downstream_channel_metrics(registry),
-                self.__update_upstream_channel_metrics(registry),
-                self.__log_based_metrics(registry),
-            )
-
-            metric_modem_info.info(
-                {
-                    "mac": state.mac_address,
-                    "serial": state.serial_number,
-                    "software_version": system_info.software_version,
-                    "hardware_version": system_info.hardware_version,
-                    "boot_file_name": state.boot_file_name,
-                }
-            )
-            metric_modem_uptime.set(state.up_time)
-            MODEM_UPDATE_COUNT.labels(status="success").inc()
-        except (
-            aiohttp.ClientResponseError,
-            aiohttp.client_exceptions.ClientConnectorError,
-            asyncio.TimeoutError,
-        ) as e:
-            LOG.exception("Failed to gather metrics")
-            MODEM_UPDATE_COUNT.labels(status="failed").inc()
-            raise web.HTTPServiceUnavailable(
-                body=f"Failed to gather metrics: {e}", headers={"Retry-After": "60"}
-            )
-        finally:
-            # async logout so we do not block the web interface
-            asyncio.create_task(self.client._logout())
+            # update metrics and waith max 10 seconds
+            async with asyncio.timeout(10):
+                await asyncio.shield(self.update_metrics())
+        except TimeoutError:
+            LOG.info("Timeout when updating metrics - using old values")
+            MODEM_UPDATE_COUNT.labels(status="timeout").inc()
+            MODEM_LAST_UPDATE.labels(status="timeout").set_to_current_time()
+        except MetricUpdateFailedError:
+            pass
 
         # from aiohttp support in prometheus-async
         generate, _ = aio.web._choose_generator("*/*")
         # Join the two registries
         # FIXME: Less hacky way of ensuring the content is OK
         return web.Response(
-            body=generate(registry).decode("utf-8").strip()
+            body=generate(self.registry).decode("utf-8").strip()
             + "\n"
             + generate(REGISTRY).decode("utf-8")
         )
+
+    @aio.time(MODEM_METRICS_DURATION)
+    async def update_metrics(self) -> None:
+        """Update the metrics and store them in the registry."""
+        if self.__metrics_updating_lock.locked():
+            MODEM_UPDATE_COUNT.labels(status="locked").inc()
+            MODEM_LAST_UPDATE.labels(status="locked").set_to_current_time()
+            raise MetricUpdateFailedError("Metrics are already being updated")
+
+        async with self.__metrics_updating_lock:
+            registry = CollectorRegistry()
+            # create metrics
+            # note: _info will be postfixed
+            metric_modem_info = Info("modem", "Modem information", registry=registry)
+            metric_modem_uptime = Gauge("modem_uptime", "Uptime", registry=registry)
+
+            # gather metrics in parallel
+            try:
+                state, system_info, _, _, _ = await asyncio.gather(
+                    self.client.system_state(),
+                    self.client.system_info(),
+                    self.__update_downstream_channel_metrics(registry),
+                    self.__update_upstream_channel_metrics(registry),
+                    self.__log_based_metrics(registry),
+                )
+
+                metric_modem_info.info(
+                    {
+                        "mac": state.mac_address,
+                        "serial": state.serial_number,
+                        "software_version": system_info.software_version,
+                        "hardware_version": system_info.hardware_version,
+                        "boot_file_name": state.boot_file_name,
+                    }
+                )
+                metric_modem_uptime.set(state.up_time)
+                MODEM_UPDATE_COUNT.labels(status="success").inc()
+                MODEM_LAST_UPDATE.labels(status="success").set_to_current_time()
+
+                self.registry = registry
+            except (
+                aiohttp.ClientResponseError,
+                aiohttp.client_exceptions.ClientConnectorError,
+                asyncio.TimeoutError,
+            ) as e:
+                LOG.exception("Failed to gather metrics")
+                MODEM_UPDATE_COUNT.labels(status="failed").inc()
+                MODEM_LAST_UPDATE.labels(status="failed").set_to_current_time()
+
+                raise MetricUpdateFailedError() from e
+            finally:
+                # async logout so we do not block the web interface
+                # keep strong reference to task to prevent GC before it runs/finishes:
+                task = asyncio.create_task(self.client._logout())
+                task.add_done_callback(self.background_tasks.discard)
+                self.background_tasks.add(task)
 
     async def __update_upstream_channel_metrics(self, registry: CollectorRegistry):
         metric_upstream_frequency = Gauge(
