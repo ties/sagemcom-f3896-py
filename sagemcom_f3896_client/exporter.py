@@ -214,7 +214,7 @@ class Exporter:
             registry=registry,
         )
         metric_upstream_ofdma_info = Info(
-            "modem_upstream_ofdm",
+            "modem_upstream_ofdma",
             "Information on OFDMA channel",
             ["channel", "channel_type"],
             registry=registry,
