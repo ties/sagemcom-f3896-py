@@ -164,7 +164,6 @@ class Exporter:
 
                 self.registry = registry
             except (
-                LoginFailedException,
                 aiohttp.ClientResponseError,
                 aiohttp.client_exceptions.ClientConnectorError,
                 asyncio.TimeoutError,
@@ -172,6 +171,11 @@ class Exporter:
                 LOG.exception("Failed to gather metrics")
                 MODEM_UPDATE_COUNT.labels(status="failed").inc()
                 MODEM_LAST_UPDATE.labels(status="failed").set_to_current_time()
+
+                raise MetricUpdateFailedError() from e
+            except LoginFailedException as e:
+                MODEM_UPDATE_COUNT.labels(status="login_failed").inc()
+                MODEM_LAST_UPDATE.labels(status="login_failed").set_to_current_time()
 
                 raise MetricUpdateFailedError() from e
             finally:
