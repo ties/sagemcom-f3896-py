@@ -13,9 +13,9 @@ After this data is collected by prometheus it can be used to alert based on metr
 
 ## Compatibility
 
-| Router model | Provider(s) | Comments |
-| -------------------------- | ---------- | --------------------------------- |
-| Connectbox Giga (F3896-LG) | Ziggo (NL) | Primary development on this modem |
+| Router model                      | Provider(s) | Comments                          |
+| --------------------------        | ----------  | --------------------------------- |
+| SmartWifi modem (black, F3896-LG) | Ziggo (NL)  | Primary development on this modem |
 
 ## Running
 
