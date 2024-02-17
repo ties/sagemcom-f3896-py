@@ -11,6 +11,7 @@ from prometheus_client import REGISTRY, CollectorRegistry, Counter, Gauge, Info,
 
 from sagemcom_f3896_client import templates
 from sagemcom_f3896_client.client import SagemcomModemClient, SagemcomModemSessionClient
+from sagemcom_f3896_client.exception import LoginFailedException
 from sagemcom_f3896_client.log_parser import (
     CMStatusMessageOFDM,
     DownstreamProfileMessage,
@@ -163,6 +164,7 @@ class Exporter:
 
                 self.registry = registry
             except (
+                LoginFailedException,
                 aiohttp.ClientResponseError,
                 aiohttp.client_exceptions.ClientConnectorError,
                 asyncio.TimeoutError,

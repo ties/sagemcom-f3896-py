@@ -1,6 +1,7 @@
-## 2024-xx-yy (v0.4.1)
+## 2024-02-17 (v0.4.1)
 
   * fix: `modem_upstream_ofdm` metric is now called `modem_upstream_ofdma`
+  * fix: Return metrics when login fails (main cause: concurrent login)
 
 ## 2024-02-xx (v0.4.0)
 
