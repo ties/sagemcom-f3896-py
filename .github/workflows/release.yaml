@@ -32,7 +32,7 @@ jobs:
             # list of Docker images to use as base name for tags
             images: |
               ghcr.io/${{ github.repository_owner }}/sagemcom-f3896-py
-              tags: |
+            tags: |
               type=semver,pattern={{version}}
               type=semver,pattern={{major}}.{{minor}}
               type=semver,pattern={{major}}
