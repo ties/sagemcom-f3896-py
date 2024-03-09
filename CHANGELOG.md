@@ -1,3 +1,11 @@
+
+## 2024-03-09 (v0.5.0)
+
+  * Enable dependabot dependency management
+  * Add `modem_upstream_timeout_count` metric that will replace
+    `modem_upstream_timeouts` metric (clearer name).
+  * **deprecated** `modem_upstream_timeouts` metric. Will be removed on or after 1-5-20204.
+
 ## 2024-02-17 (v0.4.1)
 
   * fix: `modem_upstream_ofdm` metric is now called `modem_upstream_ofdma`
