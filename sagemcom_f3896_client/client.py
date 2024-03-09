@@ -226,9 +226,11 @@ class SagemcomModemSessionClient:
     ) -> List[ModemQAMDownstreamChannelResult | ModemOFDMDownstreamChannelResult]:
         async with self.__request("GET", "/rest/v1/cablemodem/downstream") as resp:
             return [
-                ModemQAMDownstreamChannelResult.build(e)
-                if e["channelType"] == "sc_qam"
-                else ModemOFDMDownstreamChannelResult.build(e)
+                (
+                    ModemQAMDownstreamChannelResult.build(e)
+                    if e["channelType"] == "sc_qam"
+                    else ModemOFDMDownstreamChannelResult.build(e)
+                )
                 for e in (await resp.json())["downstream"]["channels"]
             ]
 
@@ -237,9 +239,11 @@ class SagemcomModemSessionClient:
     ) -> List[ModemATDMAUpstreamChannelResult | ModemOFDMAUpstreamChannelResult]:
         async with self.__request("GET", "/rest/v1/cablemodem/upstream") as resp:
             return [
-                ModemATDMAUpstreamChannelResult.build(e)
-                if e["channelType"] == "atdma"
-                else ModemOFDMAUpstreamChannelResult.build(e)
+                (
+                    ModemATDMAUpstreamChannelResult.build(e)
+                    if e["channelType"] == "atdma"
+                    else ModemOFDMAUpstreamChannelResult.build(e)
+                )
                 for e in (await resp.json())["upstream"]["channels"]
             ]
 

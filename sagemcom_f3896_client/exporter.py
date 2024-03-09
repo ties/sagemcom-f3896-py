@@ -378,9 +378,11 @@ class Exporter:
                     ).info(
                         {
                             "modulation": ch.modulation,
-                            "primary": "true"
-                            if ch.channel_id == primary_downstream.channel_id
-                            else "false",
+                            "primary": (
+                                "true"
+                                if ch.channel_id == primary_downstream.channel_id
+                                else "false"
+                            ),
                         }
                     )
                 case "ofdm":
