@@ -76,9 +76,11 @@ def parse_message(message: str) -> Optional[ParsedMessage]:
     if match:
         return DownstreamProfileMessage(
             channel_id=int(match.group("channel_id")),
-            previous_profile=tuple(map(int, match.group("previous_profile").split()))
-            if match.group("previous_profile")
-            else None,
+            previous_profile=(
+                tuple(map(int, match.group("previous_profile").split()))
+                if match.group("previous_profile")
+                else None
+            ),
             profile=tuple(map(int, match.group("profile").split())),
         )
 
@@ -86,9 +88,11 @@ def parse_message(message: str) -> Optional[ParsedMessage]:
     if match:
         return UpstreamProfileMessage(
             channel_id=int(match.group("channel_id")),
-            previous_profile=tuple(map(int, match.group("previous_profile").split()))
-            if match.group("previous_profile")
-            else None,
+            previous_profile=(
+                tuple(map(int, match.group("previous_profile").split()))
+                if match.group("previous_profile")
+                else None
+            ),
             profile=tuple(map(int, match.group("profile").split())),
         )
 
