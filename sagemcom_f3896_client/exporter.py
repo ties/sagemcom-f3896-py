@@ -42,7 +42,7 @@ MODEM_LAST_UPDATE = Gauge(
 )
 
 
-class MetricUpdateFailedError(Exception):
+class MetricUpdateFailedException(Exception):
     pass
 
 
@@ -111,7 +111,7 @@ class Exporter:
             LOG.info("Timeout when updating metrics - using old values")
             MODEM_UPDATE_COUNT.labels(status="timeout").inc()
             MODEM_LAST_UPDATE.labels(status="timeout").set_to_current_time()
-        except MetricUpdateFailedError:
+        except MetricUpdateFailedException:
             pass
 
         # from aiohttp support in prometheus-async
@@ -130,7 +130,7 @@ class Exporter:
         if self.__metrics_updating_lock.locked():
             MODEM_UPDATE_COUNT.labels(status="locked").inc()
             MODEM_LAST_UPDATE.labels(status="locked").set_to_current_time()
-            raise MetricUpdateFailedError("Metrics are already being updated")
+            raise MetricUpdateFailedException("Metrics are already being updated")
 
         async with self.__metrics_updating_lock:
             registry = CollectorRegistry()
@@ -172,12 +172,12 @@ class Exporter:
                 MODEM_UPDATE_COUNT.labels(status="failed").inc()
                 MODEM_LAST_UPDATE.labels(status="failed").set_to_current_time()
 
-                raise MetricUpdateFailedError() from e
+                raise MetricUpdateFailedException() from e
             except LoginFailedException as e:
                 MODEM_UPDATE_COUNT.labels(status="login_failed").inc()
                 MODEM_LAST_UPDATE.labels(status="login_failed").set_to_current_time()
 
-                raise MetricUpdateFailedError() from e
+                raise MetricUpdateFailedException() from e
             finally:
                 # async logout so we do not block the web interface
                 # keep strong reference to task to prevent GC before it runs/finishes:
@@ -207,6 +207,12 @@ class Exporter:
 
         # Technically a counter, but value of a counter can not be set
         metric_upstream_timeouts = Gauge(
+            "modem_upstream_timeout_total",
+            "Upstream timeouts by type",
+            ["channel", "channel_type", "timeout_type"],
+            registry=registry,
+        )
+        metric_upstream_timeouts_legacy = Gauge(
             "modem_upstream_timeouts",
             "Upstream timeouts by type",
             ["channel", "channel_type", "timeout_type"],
@@ -244,6 +250,13 @@ class Exporter:
             metric_upstream_timeouts.labels(
                 channel=ch.channel_id, channel_type=ch.channel_type, timeout_type="t4"
             ).set(ch.t4_timeouts)
+            # legacy metric (deprecated, removal after 1-5-2024)
+            metric_upstream_timeouts_legacy.labels(
+                channel=ch.channel_id, channel_type=ch.channel_type, timeout_type="t3"
+            ).set(ch.t3_timeouts)
+            metric_upstream_timeouts_legacy.labels(
+                channel=ch.channel_id, channel_type=ch.channel_type, timeout_type="t4"
+            ).set(ch.t4_timeouts)
 
             match ch.channel_type:
                 case "atdma":
@@ -261,6 +274,17 @@ class Exporter:
                         timeout_type="t1",
                     ).set(ch.t1_timeouts)
                     metric_upstream_timeouts.labels(
+                        channel=ch.channel_id,
+                        channel_type=ch.channel_type,
+                        timeout_type="t2",
+                    ).set(ch.t2_timeouts)
+                    # legacy metric (deprecated, removal after 1-5-2024)
+                    metric_upstream_timeouts_legacy.labels(
+                        channel=ch.channel_id,
+                        channel_type=ch.channel_type,
+                        timeout_type="t1",
+                    ).set(ch.t1_timeouts)
+                    metric_upstream_timeouts_legacy.labels(
                         channel=ch.channel_id,
                         channel_type=ch.channel_type,
                         timeout_type="t2",
