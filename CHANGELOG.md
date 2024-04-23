@@ -1,3 +1,8 @@
+## 2024-xx-yy (v0.x.y)
+
+  * Add `modem_downstream_errors_total` that will replace
+    `modem_downstream_errors` metric (clearer name).
+  * **deprecated** the `modem_downstream_errors` metric. Will be removed on or after 1-7-2024.
 
 ## 2024-03-09 (v0.5.0)
 

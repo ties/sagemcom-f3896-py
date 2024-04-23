@@ -335,6 +335,13 @@ class Exporter:
 
         # Technically a counter, but counter value can not be set
         metric_downstream_errors = Gauge(
+            "modem_downstream_errors_total",
+            "Downstream errors",
+            ["channel", "channel_type", "error_type"],
+            registry=registry,
+        )
+        # added on 23-4-2024
+        metric_downstream_errors_legacy = Gauge(
             "modem_downstream_errors",
             "Downstream errors",
             ["channel", "channel_type", "error_type"],
@@ -386,6 +393,16 @@ class Exporter:
                 error_type="corrected",
             ).set(ch.corrected_errors)
             metric_downstream_errors.labels(
+                channel=ch.channel_id,
+                channel_type=ch.channel_type,
+                error_type="uncorrected",
+            ).set(ch.uncorrected_errors)
+            metric_downstream_errors_legacy.labels(
+                channel=ch.channel_id,
+                channel_type=ch.channel_type,
+                error_type="corrected",
+            ).set(ch.corrected_errors)
+            metric_downstream_errors_legacy.labels(
                 channel=ch.channel_id,
                 channel_type=ch.channel_type,
                 error_type="uncorrected",
