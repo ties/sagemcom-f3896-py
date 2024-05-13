@@ -11,7 +11,7 @@ f3896-cli = "sagemcom_f3896_client.cli:cli"
 [tool.poetry.dependencies]
 click = "^8.1.7"
 python = "^3.10"
-aiohttp = "^3.9.2"
+aiohttp = "^3.9.4"
 prometheus-async = {extras = ["aiohttp"], version = "^22.2.0" }
 
 
