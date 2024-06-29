@@ -1,5 +1,6 @@
 ## 2024-xx-yy (v0.x.y)
 
+  * Add `node_boot_time_seconds` metric calculated from uptime.
   * Add `modem_downstream_errors_total` that will replace
     `modem_downstream_errors` metric (clearer name).
   * **deprecated** the `modem_downstream_errors` metric. Will be removed on or after 1-7-2024.
