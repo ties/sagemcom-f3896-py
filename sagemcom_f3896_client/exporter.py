@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import time
 from typing import List, Set
 
 import aiohttp
@@ -68,6 +69,7 @@ class Exporter:
     background_tasks: Set[asyncio.Task] = set()
 
     __metrics_updating_lock: asyncio.Lock = asyncio.Lock()
+    __last_boot_time: float = 0
 
     def __init__(
         self,
@@ -138,6 +140,11 @@ class Exporter:
             # note: _info will be postfixed
             metric_modem_info = Info("modem", "Modem information", registry=registry)
             metric_modem_uptime = Gauge("modem_uptime", "Uptime", registry=registry)
+            metric_node_boot_time = Gauge(
+                "node_boot_time_seconds",
+                "Node boot time, in unixtime (shifts when clocks between host and modem skew more than 10s).",
+                registry=registry,
+            )
 
             # gather metrics in parallel
             try:
@@ -158,7 +165,18 @@ class Exporter:
                         "boot_file_name": state.boot_file_name,
                     }
                 )
+
                 metric_modem_uptime.set(state.up_time)
+
+                # only update the boot time if it shifted more than 10s. This
+                # stabilizes the value.
+                boot_time = time.time() - state.up_time
+                if abs(boot_time - self.__last_boot_time) > 10:
+                    self.__last_boot_time = boot_time
+                # the metrics in the registry get re-created every time => set
+                # the value every time.
+                metric_node_boot_time.set(self.__last_boot_time)
+
                 MODEM_UPDATE_COUNT.labels(status="success").inc()
                 MODEM_LAST_UPDATE.labels(status="success").set_to_current_time()
 
