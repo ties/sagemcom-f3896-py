@@ -1,5 +1,7 @@
-## 2024-xx-yy (v0.x.y)
+## 2024-8-29 (v0.6.0)
 
+  * Update dependencies
+  * Document `MODEM_URL` option
   * Add `node_boot_time_seconds` metric calculated from uptime.
   * Add `modem_downstream_errors_total` that will replace
     `modem_downstream_errors` metric (clearer name).

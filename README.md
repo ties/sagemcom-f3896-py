@@ -78,6 +78,7 @@ services:
       - 8080:8080
     environment:
       MODEM_PASSWORD: PASSWORD123
+      MODEM_URL: http://192.168.100.1
 ```
 
 ## Endpoints
