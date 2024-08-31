@@ -1,3 +1,11 @@
+## 2024-08-31 (v0.6.1)
+
+  * Fix bug in channel profile store: while it would not happen in practice, 
+    downstream and upstream channels with same number would cause messages to be kept
+    while channel would be gone for their channel type.
+  * Improved tests of channel profile store.
+  * **removed `modem_downstream_errors` and `modem_upstream_timeouts`.
+
 ## 2024-8-29 (v0.6.0)
 
   * Update dependencies
