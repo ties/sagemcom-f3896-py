@@ -230,12 +230,6 @@ class Exporter:
             ["channel", "channel_type", "timeout_type"],
             registry=registry,
         )
-        metric_upstream_timeouts_legacy = Gauge(
-            "modem_upstream_timeouts",
-            "Upstream timeouts by type",
-            ["channel", "channel_type", "timeout_type"],
-            registry=registry,
-        )
 
         metric_upstream_atdma_info = Info(
             "modem_upstream_atdma",
@@ -268,13 +262,6 @@ class Exporter:
             metric_upstream_timeouts.labels(
                 channel=ch.channel_id, channel_type=ch.channel_type, timeout_type="t4"
             ).set(ch.t4_timeouts)
-            # legacy metric (deprecated, removal after 1-5-2024)
-            metric_upstream_timeouts_legacy.labels(
-                channel=ch.channel_id, channel_type=ch.channel_type, timeout_type="t3"
-            ).set(ch.t3_timeouts)
-            metric_upstream_timeouts_legacy.labels(
-                channel=ch.channel_id, channel_type=ch.channel_type, timeout_type="t4"
-            ).set(ch.t4_timeouts)
 
             match ch.channel_type:
                 case "atdma":
@@ -292,17 +279,6 @@ class Exporter:
                         timeout_type="t1",
                     ).set(ch.t1_timeouts)
                     metric_upstream_timeouts.labels(
-                        channel=ch.channel_id,
-                        channel_type=ch.channel_type,
-                        timeout_type="t2",
-                    ).set(ch.t2_timeouts)
-                    # legacy metric (deprecated, removal after 1-5-2024)
-                    metric_upstream_timeouts_legacy.labels(
-                        channel=ch.channel_id,
-                        channel_type=ch.channel_type,
-                        timeout_type="t1",
-                    ).set(ch.t1_timeouts)
-                    metric_upstream_timeouts_legacy.labels(
                         channel=ch.channel_id,
                         channel_type=ch.channel_type,
                         timeout_type="t2",
@@ -358,13 +334,6 @@ class Exporter:
             ["channel", "channel_type", "error_type"],
             registry=registry,
         )
-        # added on 23-4-2024
-        metric_downstream_errors_legacy = Gauge(
-            "modem_downstream_errors",
-            "Downstream errors",
-            ["channel", "channel_type", "error_type"],
-            registry=registry,
-        )
 
         metric_downstream_qam_snr = Gauge(
             "modem_downstream_qam_snr",
@@ -411,16 +380,6 @@ class Exporter:
                 error_type="corrected",
             ).set(ch.corrected_errors)
             metric_downstream_errors.labels(
-                channel=ch.channel_id,
-                channel_type=ch.channel_type,
-                error_type="uncorrected",
-            ).set(ch.uncorrected_errors)
-            metric_downstream_errors_legacy.labels(
-                channel=ch.channel_id,
-                channel_type=ch.channel_type,
-                error_type="corrected",
-            ).set(ch.corrected_errors)
-            metric_downstream_errors_legacy.labels(
                 channel=ch.channel_id,
                 channel_type=ch.channel_type,
                 error_type="uncorrected",
