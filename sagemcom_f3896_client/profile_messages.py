@@ -26,20 +26,32 @@ class ProfileMessageStore:
         ds_channels: List[ModemDownstreamChannelResult],
         us_channels: List[ModemUpstreamChannelResult],
     ) -> int:
-        all_channels = frozenset(c.channel_id for c in ds_channels) | frozenset(
-            c.channel_id for c in us_channels
-        )
-        removed = 0
-        for message in list(self._messages):
-            if message.channel_id not in all_channels:
-                LOG.info(
-                    "Dropping profile message for no longer present downstream channel %d",
-                    message.channel_id,
-                )
-                self._messages.remove(message)
-                removed += 1
+        ds_channels_ids = frozenset(c.channel_id for c in ds_channels)
+        us_channel_ids = frozenset(c.channel_id for c in us_channels)
 
-        return removed
+        removed = []
+        for message in list(self._messages):
+            match message:
+                case DownstreamProfileMessage(
+                    channel_id=channel_id
+                ) if channel_id not in ds_channels_ids:
+                    removed.append(message)
+                case UpstreamProfileMessage(
+                    channel_id=channel_id
+                ) if channel_id not in us_channel_ids:
+                    removed.append(message)
+
+        # do not remove while iterating
+        for message in removed:
+            self._messages.remove(message)
+            LOG.info(
+                "Dropping profile message for no longer present channel %d (previous profile: %s, new: %s)",
+                message.channel_id,
+                message.previous_profile,
+                message.profile,
+            )
+
+        return len(removed)
 
     def add(self, message: DownstreamProfileMessage | UpstreamProfileMessage):
         """Add a messsage, removing a message of that type for that channel if present."""
